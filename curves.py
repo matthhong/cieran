@@ -89,15 +89,15 @@ if __name__ == '__main__':
     # Create a B-spline curve
     points = np.random.rand(2, 6)
 
-    for a in [0, 0.1, 0.5, 1, 2, 5, 10, 20, 50, 100]:
-        curve = Bspline(points, degree=5, alpha=a)
+    # for a in [0, 0.1, 0.5, 1, 2, 5, 10, 20, 50, 100]:
+    curve = Bspline(points, degree=5, alpha=0.5)
 
-        # Evaluate the curve at 100 points
-        t = np.linspace(0, 1, 100)
-        x, y = curve.evaluate(t)
+    # Evaluate the curve at 100 points
+    t = np.linspace(0, 1, 100)
+    x, y = curve.evaluate(t)
 
-        # Plot the results
-        import matplotlib.pyplot as plt
-        plt.plot(x, y, 'r')
-        plt.plot(points[0], points[1], 'bo')
-        plt.show()
+    # Plot the results
+    import matplotlib.pyplot as plt
+    plt.plot(x, y, 'r')
+    plt.plot(points[0], points[1], 'bo')
+    plt.show()
