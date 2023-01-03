@@ -95,7 +95,7 @@ if __name__ == '__main__':
     points = np.random.rand(50, 3)
 
     # Create a KDTree
-    tree = KDTree(points, constrained_axis=0)
+    tree = KDTree(points)
 
     # Query the tree
     k = 5
