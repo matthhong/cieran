@@ -57,7 +57,7 @@ if __name__ == '__main__':
     obstacles = [[50, 0, 0]]
     planner = Planning(waypoints, obstacles, 10, 1000)
     path = planner.get_path()
-    ramper = Ramping(path, truncate_front=0.2, truncate_back=0.2)
+    ramper = Ramping(path, truncate_front=0, truncate_back=0)
     
     ramper.execute()
 
