@@ -1,5 +1,5 @@
 import numpy as np
-from networkx import Graph, astar_path
+from networkx import Graph, astar_path, dijkstra_path
 from coloraide import Color
 from scipy.stats.qmc import Halton
 from KDTree import KDTree
@@ -11,6 +11,9 @@ class Planning:
         # convert waypoints to a list of lists of floats
         if waypoints is not None:
             self.waypoints = [[float(waypoint[0]), float(waypoint[1]), float(waypoint[2])] for waypoint in waypoints]
+
+        # sort waypoints by first element
+        self.waypoints.sort(key=lambda x: x[0])
         
         if obstacles is not None:
             self.obstacles = [[float(obstacle[0]), float(obstacle[1]), float(obstacle[2])] for obstacle in obstacles]
@@ -21,20 +24,25 @@ class Planning:
         self.samples = []
         self.dimensions = [(0,100), (-128,128), (-128,128)]
         
-        # Initialize the Halton sampler
-        sampler = Halton(len(self.dimensions))
+        # # Initialize the Halton sampler
+        # sampler = Halton(len(self.dimensions))
 
-        # Generate samples
-        samples = sampler.random(self.num_samples)
+        # # Generate samples
+        # samples = sampler.random(self.num_samples)
 
-        # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
-        samples = np.array([self.dimensions[i][0] + (self.dimensions[i][1] - self.dimensions[i][0]) * samples[:, i] for i in range(len(self.dimensions))]).T
+        # # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
+        # samples = np.array([self.dimensions[i][0] + (self.dimensions[i][1] - self.dimensions[i][0]) * samples[:, i] for i in range(len(self.dimensions))]).T
 
-        # Remove samples that are outside gamut or in collision with obstacles (circles of radius obstacle_rad)
-        for i in range(len(samples)):
-            for j in range(len(self.obstacles)):
-                if self.in_gamut(*samples[i]) and np.linalg.norm(samples[i] - self.obstacles[j]) > self.obstacle_rad:
-                    self.samples.append(samples[i])
+        # # Remove samples that are outside gamut or in collision with obstacles (circles of radius obstacle_rad)
+        # for i in range(len(samples)):
+        #     for j in range(len(self.obstacles)):
+        #         if self.in_gamut(*samples[i]) and np.linalg.norm(samples[i] - self.obstacles[j]) > self.obstacle_rad:
+        #             self.samples.append(samples[i])
+
+        # Load samples from centroid file
+        with open('centroids.txt', 'r') as f:
+            for line in f:
+                self.samples.append([float(x) for x in line.split()])
         
         # Add start, waypoints, and end to the samples
         for i in range(len(self.waypoints)):
@@ -89,6 +97,10 @@ class Planning:
 
         for i in range(len(wps) - 1):
             path += astar_path(self.graph, tuple(wps[i]), tuple(wps[i + 1]))[1:]
+        
+        # # Use Dijkstra instead
+        # for i in range(len(wps) - 1):
+        #     path += dijkstra_path(self.graph, tuple(wps[i]), tuple(wps[i + 1]))[1:]
         
         return path
 
