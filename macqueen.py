@@ -109,5 +109,5 @@ if __name__ == "__main__":
 
     # Final output:
     # Number of points: 2541
-    # Average distance between centroids: 5.13318935822155
+    # Average distance between colors: 5.13318935822155
     # Number of centroids: 512
