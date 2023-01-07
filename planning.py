@@ -3,7 +3,7 @@ from networkx import Graph, astar_path, dijkstra_path
 from coloraide import Color
 from scipy.stats.qmc import Halton
 from KDTree import KDTree
-
+from colorspace import color_distance, lab_to_rgb
 
 class Planning:
     # Ramp planner
@@ -23,21 +23,6 @@ class Planning:
 
         self.samples = []
         self.dimensions = [(0,100), (-128,128), (-128,128)]
-        
-        # # Initialize the Halton sampler
-        # sampler = Halton(len(self.dimensions))
-
-        # # Generate samples
-        # samples = sampler.random(self.num_samples)
-
-        # # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
-        # samples = np.array([self.dimensions[i][0] + (self.dimensions[i][1] - self.dimensions[i][0]) * samples[:, i] for i in range(len(self.dimensions))]).T
-
-        # # Remove samples that are outside gamut or in collision with obstacles (circles of radius obstacle_rad)
-        # for i in range(len(samples)):
-        #     for j in range(len(self.obstacles)):
-        #         if self.in_gamut(*samples[i]) and np.linalg.norm(samples[i] - self.obstacles[j]) > self.obstacle_rad:
-        #             self.samples.append(samples[i])
 
         # Load samples from centroid file
         with open('centroids.txt', 'r') as f:
@@ -66,7 +51,8 @@ class Planning:
             distances, points = tree.query(n1, 16)
             
             for k, n2 in enumerate(points):
-                if self.can_connect(n1, n2):
+                # check if n2 is a waypoint, otherwise check if the midpoint is collision free
+                if np.isin(n2, self.waypoints).any() or self.can_connect(n1, n2):
                     self.graph.add_edge(tuple(n1), tuple(n2), weight=distances[k])
                     
     
@@ -78,9 +64,9 @@ class Planning:
         # check if the midpoint of the line between two nodes is in collision with obstacles
         midpoint = (n1 + n2) / 2
         for i in range(len(self.obstacles)):
-            if self.in_gamut(*midpoint) and np.linalg.norm(midpoint - self.obstacles[i]) > self.obstacle_rad:
-                return True
-        return False
+            if not (self.in_gamut(*midpoint) and np.linalg.norm(midpoint - self.obstacles[i]) > self.obstacle_rad):
+                return False
+        return True
 
 
     def find_path(self):
