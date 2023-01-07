@@ -7,7 +7,7 @@ from coloraide import Color
     
 class Ramping:
 
-    def __init__(self, control_points, truncate_front=20, truncate_back=20):
+    def __init__(self, control_points, truncate_front=0.2, truncate_back=0.2):
         self.truncate_front = truncate_front
         self.truncate_back = truncate_back
 
@@ -77,10 +77,10 @@ if __name__ == '__main__':
 
     # Test the Ramping class with the Planning class
     waypoints = [[84, 11, 31], [57, 15, -46]]
-    obstacles = [[60, -43, 53]]
+    obstacles = [[78, 9, 1], [95, -20, 5]]
     planner = Planning(waypoints, obstacles, 10, 1000)
     path = planner.get_path()
-    ramper = Ramping(path, truncate_front=0.2, truncate_back=0.2)
+    ramper = Ramping(path, truncate_front=0, truncate_back=0)
     
     ramper.execute()
 
@@ -112,5 +112,10 @@ if __name__ == '__main__':
 
     # path in green
     ax.plot(*zip(*ramper.path), c='g')
+
+    # Label the axes
+    ax.set_xlabel('L*')
+    ax.set_ylabel('a*')
+    ax.set_zlabel('b*')
     
     plt.show()
