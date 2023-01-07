@@ -53,7 +53,8 @@ class KDTree:
 
                 # Custom skip
                 if self.constrained_axis is not None:
-                    if p[self.constrained_axis] <= point[self.constrained_axis]:
+                    # Check if current point has a higher value than the query point on the constrained axis
+                    if not (p[self.constrained_axis] - point[self.constrained_axis] > 0):
                         continue
 
                 # Compute the distance from the point to the query point

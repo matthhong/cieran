@@ -45,8 +45,8 @@ class Ramping:
         # We want to parameterize by t', which measures normalized arclength.
 
         # Get the points from the ramp
-        t = np.linspace(0, 1, 1000)
-        at = np.linspace(0, 1, 1000)
+        t = np.linspace(self.truncate_front, 1-self.truncate_back, 1000)
+        at = np.linspace(self.truncate_front, 1-self.truncate_back, 1000)
         points = self.ramp.evaluate_list(at)
 
         # Get the arc length of the ramp at each point using distance function
@@ -64,7 +64,7 @@ class Ramping:
         self.path = self.ramp.evaluate_list(at_t)
 
         # Truncate the front and back of the path
-        self.path = self.path[round(self.truncate_front * len(self.path)):len(self.path) - round(self.truncate_back * len(self.path))]
+        # self.path = self.path[round(self.truncate_front * len(self.path)):len(self.path) - round(self.truncate_back * len(self.path))]
 
     def distance(self, p1, p2):
         return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')
@@ -76,9 +76,9 @@ if __name__ == '__main__':
     from ramping import Ramping
 
     # Test the Ramping class with the Planning class
-    waypoints = [[84, 11, 31], [57, 15, -46]]
-    obstacles = [[78, 9, 1], [95, -20, 5]]
-    planner = Planning(waypoints, obstacles, 10, 1000)
+    waypoints = [[85, -2, -9], [57, 15, -46]]
+    obstacles = [[78, 9, 1], [84, -14, -9]]
+    planner = Planning(waypoints, obstacles, 20, 1000)
     path = planner.get_path()
     ramper = Ramping(path, truncate_front=0, truncate_back=0)
     
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     samples = planner.samples[~np.isin(np.arange(len(planner.samples)), waypoint_indices)]
 
     # samples in gray
-    # ax.scatter(*zip(*samples), c='gray')
+    ax.scatter(*zip(*samples), c='gray')
 
     # waypoints in blue
     ax.scatter(*zip(*planner.path), c='b')

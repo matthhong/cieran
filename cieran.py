@@ -128,20 +128,22 @@ class Cieran:
 
         # Plot the interpolated curve in matplotlib, projecting into 2D, showing only y and z
         # obstacles in red
-        obstacles_proj = np.array(self.planner.obstacles)[:, [1, 2]]
-        axs[0].scatter(*zip(*obstacles_proj), c='red')
+        if len(self.planner.obstacles) > 0:
+            obstacles_proj = np.array(self.planner.obstacles)[:, [1, 2]]
+            axs[0].scatter(*zip(*obstacles_proj), c='red')
 
-        # Draw a circle of radius rad_obstacles around each obstacle, with a dashed black line
-        for obstacle in self.planner.obstacles:
-            circle = plt.Circle((obstacle[1], obstacle[2]), self.rad_obstacles, color='black', fill=False, linestyle='dashed')
-            axs[0].add_artist(circle)
+            # Draw a circle of radius rad_obstacles around each obstacle, with a dashed black line
+            for obstacle in self.planner.obstacles:
+                circle = plt.Circle((obstacle[1], obstacle[2]), self.rad_obstacles, color='black', fill=False, linestyle='dashed')
+                axs[0].add_artist(circle)
 
-        # waypoints in their color values in cielab
-        waypoints_proj = np.array(self.planner.path)[:, [1, 2]]
-        axs[0].scatter(
-            *zip(*waypoints_proj), 
-            c=[Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3] for centroid in self.planner.path]
-        )
+        if len(self.planner.waypoints) > 0:
+            # waypoints in their color values in cielab
+            waypoints_proj = np.array(self.planner.path)[:, [1, 2]]
+            axs[0].scatter(
+                *zip(*waypoints_proj), 
+                c=[Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3] for centroid in self.planner.path]
+            )
 
         # path in green
         path_proj = np.array(self.ramper.path)[:, [1, 2]]
