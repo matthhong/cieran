@@ -1,6 +1,6 @@
 import numpy as np
 from queue import PriorityQueue
-    
+import networkx as nx    
 
 # KDTreeNode: points, depth -> KDTreeNode
 class KDTreeNode:
@@ -25,9 +25,10 @@ class KDTreeNode:
 
 # KDTree: points -> KDTree
 class KDTree:
-    def __init__(self, points, constrained_axis=None):
+    def __init__(self, points, constrained_axis=None, direction=1):
         self.constrained_axis = constrained_axis
         self.root = KDTreeNode(points)
+        self.direction = direction
 
     # query: point, k -> (distances, points)
     def query(self, point, k):
@@ -37,7 +38,10 @@ class KDTree:
         # Recursively search the tree
         self._query(self.root, point, k, queue)
         # Return the k nearest neighbors
-        distances, points = np.array(queue.queue).T
+        try:
+            distances, points = np.array(queue.queue).T
+        except:
+            breakpoint()
         return -distances, np.stack(points)
 
 
@@ -54,7 +58,7 @@ class KDTree:
                 # Custom skip
                 if self.constrained_axis is not None:
                     # Check if current point has a higher value than the query point on the constrained axis
-                    if not (p[self.constrained_axis] - point[self.constrained_axis] > 0):
+                    if not (self.direction * (p[self.constrained_axis] - point[self.constrained_axis]) > 0):
                         continue
 
                 # Compute the distance from the point to the query point

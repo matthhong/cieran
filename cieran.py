@@ -8,15 +8,16 @@ from matplotlib.colors import ListedColormap
 
 class Cieran:
     # Uses the Planning and Rampling classes to draw a curve through waypoints, avoiding obstacles with radius r, and truncating the front and back of the curve
-    def __init__(self, waypoints, obstacles, rad_obstacles, truncate_front=20, truncate_back=20):
+    def __init__(self, waypoints, obstacles=[], rad_obstacles=0, truncate_front=20, truncate_back=20, min_c=0):
         self.waypoints = waypoints
         self.obstacles = obstacles
         self.rad_obstacles = rad_obstacles
         self.truncate_front = truncate_front
         self.truncate_back = truncate_back
+        self.min_c = min_c
 
         # Create a planner and ramper
-        self.planner = Planning(self.waypoints, self.obstacles, self.rad_obstacles, 1000)
+        self.planner = Planning(self.waypoints, self.obstacles, self.rad_obstacles, 1000, min_c=self.min_c)
         self.ramper = Ramping(self.planner.get_path(), self.truncate_front, self.truncate_back)
 
         # Execute the ramper
@@ -94,7 +95,7 @@ class Cieran:
         # Make sure first subplot is a square
         axs[0].set_aspect('equal')
 
-        axs[1].set_aspect(2)
+        axs[1].set_aspect(3)
         axs[2].set_aspect(1.5)
 
         fig.suptitle("Cieran's plot")
@@ -106,8 +107,8 @@ class Cieran:
         rmse = np.std(distances)
         axs[2].plot(distances)
 
-        axs[2].set_title("RMS deviation from flat: %0.2f (%0.2f%%)"
-                % (rmse, 100 * rmse / arclength))
+        axs[2].set_title("Flatness of perceptual differences: %0.2f%%"
+                % (100 - (100 * rmse / arclength)))
         axs[2].set_xlabel("Point")
         axs[2].set_ylabel("Distance")
 

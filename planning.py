@@ -1,63 +1,105 @@
 import numpy as np
-from networkx import Graph, astar_path, dijkstra_path
+from networkx import DiGraph, astar_path, dijkstra_path
 from coloraide import Color
 from scipy.stats.qmc import Halton
 from KDTree import KDTree
 from colorspace import color_distance, lab_to_rgb
 
+import igraph as ig
+
 class Planning:
     # Ramp planner
-    def __init__(self, waypoints=None, obstacles=None, obstacle_rad=0, num_samples=1000):
+    def __init__(self, waypoints=None, obstacles=None, obstacle_rad=0, num_samples=1000, min_c=0):
+
+        self.min_c = min_c
+
         # convert waypoints to a list of lists of floats
         if waypoints is not None:
-            self.waypoints = [[float(waypoint[0]), float(waypoint[1]), float(waypoint[2])] for waypoint in waypoints]
+            self.waypoints = np.array([[float(waypoint[0]), float(waypoint[1]), float(waypoint[2])] for waypoint in waypoints])
+
+        # Insert start (0.0, 0.0, 0.0)
+        self.waypoints = np.append(self.waypoints, [[0.0, 0.0, 0.0]], axis=0)
+        self.waypoints = np.append(self.waypoints, [[100.0, 0.0, 0.0]], axis=0)
 
         # sort waypoints by first element
-        self.waypoints.sort(key=lambda x: x[0])
+        self.waypoints = self.waypoints[self.waypoints[:,0].argsort()]
         
         if obstacles is not None:
-            self.obstacles = [[float(obstacle[0]), float(obstacle[1]), float(obstacle[2])] for obstacle in obstacles]
+            # convert obstacles to numpy array of floats
+            self.obstacles = np.array([[float(obstacle[0]), float(obstacle[1]), float(obstacle[2])] for obstacle in obstacles])
 
         self.obstacle_rad = obstacle_rad
         self.num_samples = num_samples
 
-        self.samples = []
+        # samples is a np.array of size (num_samples, 3)
+        self.samples = np.empty((0,3))
         self.dimensions = [(0,100), (-128,128), (-128,128)]
 
         # Load samples from centroid file
         with open('centroids.txt', 'r') as f:
             for line in f:
-                self.samples.append([float(x) for x in line.split()])
+                # Append if it doesn't hit an obstacle
+                centroid = np.array([float(x) for x in line.split()])
+                if not self.hits_obstacle(*centroid):
+                    self.samples = np.append(self.samples, [centroid], axis=0)
         
+
         # Add start, waypoints, and end to the samples
         for i in range(len(self.waypoints)):
-            self.samples.append(self.waypoints[i])
-        self.samples.insert(0, [0, 0, 0])
-        self.samples.append([100, 0, 0])
+            self.samples = np.append(self.samples, [self.waypoints[i]], axis=0)
 
-        # Transform the samples to a numpy array
-        self.samples = np.array(self.samples)
+        # Sort samples by first element
+        self.samples = self.samples[self.samples[:,0].argsort()]
+    
+        # Keep track of each node's in-degree as a dict
+        self.not_connected = self.samples.copy()[:-1]
 
-        self.graph = Graph()
+        self.graph = DiGraph()
 
         self.path = None
         
 
     def add_edges(self):
+        self.add_edges_inner(self.not_connected, direction=1)
+        self.add_edges_inner(self.not_connected, direction=-1)
+    
+
+    def add_edges_inner(self, nodes, direction):
         # iterate over pairs of nodes and add edges within a distance if their midpoint is collision free
-        tree = KDTree(self.samples, constrained_axis=0)
-        for n1 in self.samples[:-1]:
+        tree = KDTree(self.samples, constrained_axis=0, direction=direction)
+
+        for n1 in nodes:
             # for each node connect try to connect to k nearest self.samples
             distances, points = tree.query(n1, 16)
             
             for k, n2 in enumerate(points):
                 # check if n2 is a waypoint, otherwise check if the midpoint is collision free
                 if np.isin(n2, self.waypoints).any() or self.can_connect(n1, n2):
-                    self.graph.add_edge(tuple(n1), tuple(n2), weight=distances[k])
+                    # Depending on the direction, add the edge in the correct direction
+                    if direction == 1:
+                        self.graph.add_edge(tuple(n1), tuple(n2), weight=distances[k])
+                    if direction == -1:
+                        self.graph.add_edge(tuple(n2), tuple(n1), weight=distances[k])
+                    
+                    self.not_connected = self.not_connected[~np.isin(self.not_connected, [n2]).all(axis=1)]
                     
     
     def in_gamut(self, l, a, b):
         return Color("lab({}% {} {} / 1)".format(l, a, b)).in_gamut('srgb')
+
+
+    def hits_obstacle(self, l, a, b):
+        # check if a node is in collision with an obstacle, or check if the a* and b* values pass the min_sat threshold
+        for i in range(len(self.obstacles)):
+            if np.linalg.norm([l, a, b] - self.obstacles[i]) < self.obstacle_rad:
+                return True
+        
+        # Convert a and b values in Euclidean space to c in polar space
+        c = np.sqrt(a**2 + b**2)
+        if c < self.min_c:
+            return True
+
+        return False
 
 
     def can_connect(self, n1, n2):
@@ -77,13 +119,10 @@ class Planning:
 
         wps = self.waypoints.copy()
 
-        # Add the end node
-        wps.insert(0, [0.0, 0.0, 0.0])
-        wps.append([100.0, 0.0, 0.0])
-
         for i in range(len(wps) - 1):
             path += astar_path(self.graph, tuple(wps[i]), tuple(wps[i + 1]))[1:]
-        
+            print(path)
+
         # # Use Dijkstra instead
         # for i in range(len(wps) - 1):
         #     path += dijkstra_path(self.graph, tuple(wps[i]), tuple(wps[i + 1]))[1:]
@@ -103,7 +142,7 @@ class Planning:
 if __name__ == "__main__":
     waypoints = [[20, 0, 0], [70, 0, 0]]
     obstacles = [[50, 0, 0]]
-    planner = Planning(waypoints, obstacles, 10, 1000)
+    planner = Planning(waypoints, obstacles, 10, 1000, 30)
     path = planner.get_path()
 
     import matplotlib.pyplot as plt
