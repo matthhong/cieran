@@ -65,32 +65,32 @@ if __name__ == "__main__":
         # breakpoint()
         return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')
 
-    # Run the algorithm
-    centroids = MacQueenAlgorithm(points, k=512).run(color_distance)
+    # # Run the algorithm
+    # centroids = MacQueenAlgorithm(points, k=512).run(color_distance)
 
-    # Remove nan centroids
-    centroids = [centroid for centroid in centroids if not np.isnan(centroid).any()]
+    # # Remove nan centroids
+    # centroids = [centroid for centroid in centroids if not np.isnan(centroid).any()]
 
-    # Find average distance between each centroid and its 5 nearest neighbors
-    distances = []
-    for centroid in centroids:
-        distances.append(np.mean(sorted([color_distance(centroid, other) for other in centroids])[:5]))
+    # # Find average distance between each centroid and its 5 nearest neighbors
+    # distances = []
+    # for centroid in centroids:
+    #     distances.append(np.mean(sorted([color_distance(centroid, other) for other in centroids])[:5]))
     
-    print("Average distance between centroids:", np.mean(distances))
-    print("Number of centroids:", len(centroids))
+    # print("Average distance between centroids:", np.mean(distances))
+    # print("Number of centroids:", len(centroids))
 
-    # Make sure the centroids are in gamut
-    for centroid in centroids:
-        assert in_gamut(*centroid)
+    # # Make sure the centroids are in gamut
+    # for centroid in centroids:
+    #     assert in_gamut(*centroid)
 
-    # Save the centroids to a file
-    with open("centroids.txt", "w") as f:
-        for centroid in centroids:
-            f.write("{} {} {}\n".format(*centroid))
+    # # Save the centroids to a file
+    # with open("centroids.txt", "w") as f:
+    #     for centroid in centroids:
+    #         f.write("{} {} {}\n".format(*centroid))
 
-    # # Load the centroids from a file
-    # with open("centroids.txt", "r") as f:
-    #     centroids = [[float(x) for x in line.split()] for line in f.readlines()]
+    # Load the centroids from a file
+    with open("centroids.txt", "r") as f:
+        centroids = [[float(x) for x in line.split()] for line in f.readlines()]
 
     # Plot the results in 3D
     import matplotlib.pyplot as plt

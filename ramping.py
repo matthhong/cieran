@@ -76,9 +76,9 @@ if __name__ == '__main__':
     from ramping import Ramping
 
     # Test the Ramping class with the Planning class
-    waypoints = [[85, -2, -9], [57, 15, -46]]
-    obstacles = [[78, 9, 1], [84, -14, -9]]
-    planner = Planning(waypoints, obstacles, 20, 1000)
+    waypoints = [[26.6128, 37.85, -44.51], [69.2, -7.569, -24.114]]
+    obstacles = []
+    planner = Planning(waypoints, obstacles, 20, 1000, 50)
     path = planner.get_path()
     ramper = Ramping(path, truncate_front=0, truncate_back=0)
     
@@ -93,7 +93,8 @@ if __name__ == '__main__':
     ax = fig.add_subplot(111, projection='3d')
 
     # obstacles in red
-    ax.scatter(*zip(*planner.obstacles), c='r')
+    if len(planner.obstacles) > 0:
+        ax.scatter(*zip(*planner.obstacles), c='r')
 
     # # path in blue
     # ax.plot(*zip(*planner.path), c='b')
