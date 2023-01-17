@@ -75,10 +75,11 @@ if __name__ == '__main__':
     from planning import Planning
     from ramping import Ramping
 
-    # Test the Ramping class with the Planning class
-    waypoints = [[26.6128, 37.85, -44.51], [69.2, -7.569, -24.114]]
-    obstacles = []
-    planner = Planning(waypoints, obstacles, 20, 1000, 50)
+    # [69.2, -7.569, -24.114]
+    # Test the Cieran class
+    waypoints = [[26.6128, 37.85, -44.51], [90, -20, -13]]
+    obstacles = [[76, -9, -20]]
+    planner = Planning(waypoints, obstacles, 20, 1000, 0)
     path = planner.get_path()
     ramper = Ramping(path, truncate_front=0, truncate_back=0)
     

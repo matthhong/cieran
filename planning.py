@@ -70,7 +70,7 @@ class Planning:
 
         for n1 in nodes:
             # for each node connect try to connect to k nearest self.samples
-            distances, points = tree.query(n1, 16)
+            distances, points = tree.query(n1, 6)
             
             for k, n2 in enumerate(points):
                 # check if n2 is a waypoint, otherwise check if the midpoint is collision free
