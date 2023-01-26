@@ -105,6 +105,15 @@ if __name__ == "__main__":
     # Plot the centroids while coloring each point according to its CIELAB values, without point opacity
     ax.scatter([centroid[0] for centroid in centroids], [centroid[1] for centroid in centroids], [centroid[2] for centroid in centroids], c=[Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3] for centroid in centroids], marker='o', s=40, alpha=1)
 
+    # label axes
+    ax.set_xlabel('L*')
+    ax.set_ylabel('a*')
+    ax.set_zlabel('b*')
+
+    # set axis ranges
+    ax.set_xlim(0, 100)
+    ax.set_ylim(-128, 128)
+    ax.set_zlim(-128, 128)
     plt.show()
 
     # Final output:
