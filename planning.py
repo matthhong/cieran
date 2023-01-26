@@ -5,6 +5,9 @@ from scipy.stats.qmc import Halton
 from KDTree import KDTree
 from colorspace import color_distance, lab_to_rgb
 
+from utils import YenKSP, lipschitz, total_variation, lipschitz_3d, total_variation_3d
+from itertools import product
+
 import igraph as ig
 
 class Planning:
@@ -66,11 +69,11 @@ class Planning:
 
     def add_edges_inner(self, nodes, direction):
         # iterate over pairs of nodes and add edges within a distance if their midpoint is collision free
-        tree = KDTree(self.samples, constrained_axis=0, direction=direction)
+        tree = KDTree(self.samples, constrained_axis=0, direction=direction, obstacles=self.obstacles, obstacle_cost_multiplier=0.05)
 
         for n1 in nodes:
             # for each node connect try to connect to k nearest self.samples
-            distances, points = tree.query(n1, 6)
+            distances, points = tree.query(n1, 32)
             
             for k, n2 in enumerate(points):
                 # check if n2 is a waypoint, otherwise check if the midpoint is collision free
@@ -119,15 +122,39 @@ class Planning:
 
         wps = self.waypoints.copy()
 
-        for i in range(len(wps) - 1):
-            path += astar_path(self.graph, tuple(wps[i]), tuple(wps[i + 1]))[1:]
-            print(path)
+        # Store 10 different options for each waypoint pair
+        subpaths = [[]] * (len(wps) - 1)
 
-        # # Use Dijkstra instead
-        # for i in range(len(wps) - 1):
-        #     path += dijkstra_path(self.graph, tuple(wps[i]), tuple(wps[i + 1]))[1:]
+        for i in range(len(wps) - 1):
+            options = YenKSP(self.graph, tuple(wps[i]), tuple(wps[i + 1]), 100)
+
+            subpaths[i] = list(option[1:] for option in options)
+
+        # Create a list of all possible paths by taking one subpath from each element in subpaths
+        candidates = []
+        for path in product(*subpaths):
+            path = list(path)
+            path = [item for sublist in path for item in sublist]
+            # path = [(0.0,0.0,0.0)] + path
+            path = path[:-1]
+            candidates.append(path)
+
+        lch_candidates = []
+        # Convert each candidate path to polar coordinates
+        for candidate in candidates:
+            lch_candidate = []
+            for node in candidate:
+                l, a, b = node
+                c = np.sqrt(a**2 + b**2)
+                h = np.arctan2(b, a)
+                lch_candidate.append((l, c, h))
+            lch_candidates.append(lch_candidate)
+
+        # Sort the candidate indices by largest total variation and lipschitz constant
+        candidate_indices = list(range(len(candidates)))
+        candidate_indices.sort(key=lambda i: (lipschitz_3d(lch_candidates[i]), total_variation_3d(lch_candidates[i])), reverse=True)        
         
-        return path
+        return candidates[candidate_indices[0]]
 
 
     def get_path(self):

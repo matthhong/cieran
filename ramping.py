@@ -77,8 +77,12 @@ if __name__ == '__main__':
 
     # [69.2, -7.569, -24.114]
     # Test the Cieran class
-    waypoints = [[26.6128, 37.85, -44.51], [90, -20, -13]]
-    obstacles = [[76, -9, -20]]
+    # waypoints = [[26.6128, 37.85, -44.51], [90, -20, -13]]
+    # waypoints = [[26.6128, 37.85, -44.51]]
+    # obstacles = [[76, -9, -20]]
+    waypoints = [[26.6128, 37.85, -44.51], [69.2, -7.569, -24.114]]
+    obstacles = []
+
     planner = Planning(waypoints, obstacles, 20, 1000, 0)
     path = planner.get_path()
     ramper = Ramping(path, truncate_front=0, truncate_back=0)

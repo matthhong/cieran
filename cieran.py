@@ -89,14 +89,24 @@ class Cieran:
 
 
     def plot_all(self):
-        # In a 1x3 grid, plot the distances, L* values, and the interpolated curve in a 2D plot
-        fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+        import matplotlib.gridspec as gridspec
 
-        # Make sure first subplot is a square
-        axs[0].set_aspect('equal')
+        fig = plt.figure(figsize=(15, 5))
 
-        axs[1].set_aspect(3)
-        axs[2].set_aspect(1.5)
+        # Create a 3x3 grid of subplots using GridSpec
+        gs = gridspec.GridSpec(3, 3,
+                            width_ratios=[1, 1, 1],
+                            height_ratios=[1, 1, 1]
+                            )
+
+        ax1 = fig.add_subplot(gs[0:, 0])
+
+        # Create 3 subplots stacked vertically in the second column
+        ax2 = fig.add_subplot(gs[0, 1])
+        ax3 = fig.add_subplot(gs[1, 1])
+        ax4 = fig.add_subplot(gs[2, 1])
+
+        ax5 = fig.add_subplot(gs[0:, 2])
 
         fig.suptitle("Cieran's plot")
 
@@ -105,58 +115,84 @@ class Cieran:
         distances = len(distances) * distances
         arclength = np.sum(distances)   
         rmse = np.std(distances)
-        axs[2].plot(distances)
+        ax5.plot(distances)
 
-        axs[2].set_title("Flatness of perceptual differences: %0.2f%%"
+        ax5.set_title("Flatness of perceptual differences: %0.2f%%"
                 % (100 - (100 * rmse / arclength)))
-        axs[2].set_xlabel("Point")
-        axs[2].set_ylabel("Distance")
+        ax5.set_xlabel("Point")
+        ax5.set_ylabel("Distance")
 
         # Set y axes from 0 to max distance
-        axs[2].set_ylim(0, max(distances)*2)
+        ax5.set_ylim(0, max(distances)*2)
         
         # Plot the L* values ranging from 0 to 100
         l_values = np.array([self.ramper.path[i][0] for i in range(0, len(self.ramper.path))])
-        axs[1].plot(l_values)
+        ax2.plot(l_values)
 
-        axs[1].set_title("L* values")
-        axs[1].set_xlabel("Point")
-        axs[1].set_ylabel("L* value")
+        ax2.set_title("L* values")
+        ax2.set_xlabel("Point")
+        ax2.set_ylabel("L* value")
 
         # Set y axes from 0 to 100
-        axs[1].set_ylim(0, 100)
-        # axs[1].show()
+        ax2.set_ylim(0, 100)
+
+        a_values = np.array([self.ramper.path[i][1] for i in range(0, len(self.ramper.path))])
+        b_values = np.array([self.ramper.path[i][2] for i in range(0, len(self.ramper.path))])
+
+        # Convert a and b values to polar coordinates
+        c_values = np.sqrt(a_values**2 + b_values**2)
+        h_values = np.arctan2(b_values, a_values)
+
+        # Plot the c values ranging from 0 to 150
+        ax3.plot(c_values)
+
+        ax3.set_title("c* values")
+        ax3.set_xlabel("Point")
+        ax3.set_ylabel("c* value")
+
+        # Set y axes from -150 to 150
+        ax3.set_ylim(0, 150)
+
+        # Plot the h values
+        ax4.plot(h_values)
+
+        ax4.set_title("h* values")
+        ax4.set_xlabel("Point")
+        ax4.set_ylabel("h* value")
+
+        # Set y axes from  -pi to pi
+        ax4.set_ylim(-np.pi, np.pi)
 
         # Plot the interpolated curve in matplotlib, projecting into 2D, showing only y and z
         # obstacles in red
         if len(self.planner.obstacles) > 0:
             obstacles_proj = np.array(self.planner.obstacles)[:, [1, 2]]
-            axs[0].scatter(*zip(*obstacles_proj), c='red')
+            ax1.scatter(*zip(*obstacles_proj), c='red')
 
             # Draw a circle of radius rad_obstacles around each obstacle, with a dashed black line
             for obstacle in self.planner.obstacles:
                 circle = plt.Circle((obstacle[1], obstacle[2]), self.rad_obstacles, color='black', fill=False, linestyle='dashed')
-                axs[0].add_artist(circle)
+                ax1.add_artist(circle)
 
         if len(self.planner.waypoints) > 0:
             # waypoints in their color values in cielab
             waypoints_proj = np.array(self.planner.path)[:, [1, 2]]
-            axs[0].scatter(
+            ax1.scatter(
                 *zip(*waypoints_proj), 
                 c=[Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3] for centroid in self.planner.path]
             )
 
         # path in green
         path_proj = np.array(self.ramper.path)[:, [1, 2]]
-        axs[0].plot(*zip(*path_proj), c='green')
+        ax1.plot(*zip(*path_proj), c='green')
 
-        axs[0].set_title("Interpolated color ramp")
-        axs[0].set_xlabel("a*")
-        axs[0].set_ylabel("b*")
+        ax1.set_title("Interpolated color ramp")
+        ax1.set_xlabel("a*")
+        ax1.set_ylabel("b*")
 
         # Set x and y axes from -128 to 128
-        axs[0].set_xlim(-100, 100) 
-        axs[0].set_ylim(-100, 100)
+        ax1.set_xlim(-100, 100) 
+        ax1.set_ylim(-100, 100)
 
         plt.show()
 

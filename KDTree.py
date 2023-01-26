@@ -25,10 +25,12 @@ class KDTreeNode:
 
 # KDTree: points -> KDTree
 class KDTree:
-    def __init__(self, points, constrained_axis=None, direction=1):
+    def __init__(self, points, constrained_axis=None, direction=1, obstacles=None, obstacle_cost_multiplier=1):
         self.constrained_axis = constrained_axis
         self.root = KDTreeNode(points)
         self.direction = direction
+        self.obstacles = obstacles
+        self.obstacle_cost_multiplier = obstacle_cost_multiplier
 
     # query: point, k -> (distances, points)
     def query(self, point, k):
@@ -63,6 +65,18 @@ class KDTree:
 
                 # Compute the distance from the point to the query point
                 dist = np.linalg.norm(point - p)
+
+                # Compute the average distance from the point to obstacles
+                # obstacle_dist = 0
+                # for obstacle in self.obstacles:
+                #     obstacle_dist += np.linalg.norm(p - obstacle)
+                # # breakpoint()
+                
+                # if len(self.obstacles) > 0:
+                #     obstacle_dist /= len(self.obstacles) * self.obstacle_cost_multiplier
+
+                # # Cost is the distance of moving to the point, but there is reward for moving away from obstacles
+                # dist -= obstacle_dist
 
                 # If the queue is not full, add the point
                 if queue.qsize() < k:
