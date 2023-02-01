@@ -45,8 +45,8 @@ class Ramping:
         # We want to parameterize by t', which measures normalized arclength.
 
         # Get the points from the ramp
-        t = np.linspace(self.truncate_front, 1-self.truncate_back, 1000)
-        at = np.linspace(self.truncate_front, 1-self.truncate_back, 1000)
+        t = np.linspace(0, 1, 1000)
+        at = np.linspace(0, 1, 1000)
         points = self.ramp.evaluate_list(at)
 
         # Get the arc length of the ramp at each point using distance function
@@ -62,6 +62,10 @@ class Ramping:
 
         # Get the points from the ramp using the parameterization
         self.path = self.ramp.evaluate_list(at_t)
+
+        # Truncate the front and back of the path based on the first element of each point (e.g. cut if L* is less than 0.2)
+        self.path = [point for point in self.path if point[0] > self.truncate_front and point[0] < self.truncate_back]
+
 
         # Truncate the front and back of the path
         # self.path = self.path[round(self.truncate_front * len(self.path)):len(self.path) - round(self.truncate_back * len(self.path))]

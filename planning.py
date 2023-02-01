@@ -1,12 +1,12 @@
 import numpy as np
-from networkx import DiGraph, astar_path, dijkstra_path
+from networkx import DiGraph, astar_path, dijkstra_path, shortest_simple_paths
 from coloraide import Color
 from scipy.stats.qmc import Halton
 from KDTree import KDTree
 from colorspace import color_distance, lab_to_rgb
 
-from utils import YenKSP, lipschitz, total_variation, lipschitz_3d, total_variation_3d
-from itertools import product
+from utils import lipschitz, total_variation, lipschitz_3d, total_variation_3d
+from itertools import product, islice
 
 import igraph as ig
 
@@ -59,7 +59,7 @@ class Planning:
 
         self.graph = DiGraph()
 
-        self.path = None
+        self.paths = None
         
 
     def add_edges(self):
@@ -73,7 +73,7 @@ class Planning:
 
         for n1 in nodes:
             # for each node connect try to connect to k nearest self.samples
-            distances, points = tree.query(n1, 32)
+            distances, points = tree.query(n1, 16)
             
             for k, n2 in enumerate(points):
                 # check if n2 is a waypoint, otherwise check if the midpoint is collision free
@@ -114,7 +114,7 @@ class Planning:
         return True
 
 
-    def find_path(self):
+    def find_paths(self):
         # find a path from start to end through waypoints using A* and return the path
 
         # Iterate over the waypoints and run A* between each pair of waypoints
@@ -126,43 +126,47 @@ class Planning:
         subpaths = [[]] * (len(wps) - 1)
 
         for i in range(len(wps) - 1):
-            options = YenKSP(self.graph, tuple(wps[i]), tuple(wps[i + 1]), 100)
+            options = shortest_simple_paths(self.graph, tuple(wps[i]), tuple(wps[i + 1]), 'weight')
+            # import pdb; pdb.set_trace()
 
-            subpaths[i] = list(option[1:] for option in options)
+            subpaths[i] = list(option[1:] for option in islice(options, 8))
 
         # Create a list of all possible paths by taking one subpath from each element in subpaths
         candidates = []
         for path in product(*subpaths):
             path = list(path)
             path = [item for sublist in path for item in sublist]
-            # path = [(0.0,0.0,0.0)] + path
-            path = path[:-1]
+            path = [(0.0,0.0,0.0)] + path
+            # path = path[:-1]
             candidates.append(path)
 
-        lch_candidates = []
-        # Convert each candidate path to polar coordinates
-        for candidate in candidates:
-            lch_candidate = []
-            for node in candidate:
-                l, a, b = node
-                c = np.sqrt(a**2 + b**2)
-                h = np.arctan2(b, a)
-                lch_candidate.append((l, c, h))
-            lch_candidates.append(lch_candidate)
+        # lch_candidates = []
+        # # Convert each candidate path to polar coordinates
+        # for candidate in candidates:
+        #     lch_candidate = []
+        #     for node in candidate:
+        #         l, a, b = node
+        #         c = np.sqrt(a**2 + b**2)
+        #         h = np.arctan2(b, a)
+        #         lch_candidate.append((l, c, h))
+        #     lch_candidates.append(lch_candidate)
 
-        # Sort the candidate indices by largest total variation and lipschitz constant
-        candidate_indices = list(range(len(candidates)))
-        candidate_indices.sort(key=lambda i: (lipschitz_3d(lch_candidates[i]), total_variation_3d(lch_candidates[i])), reverse=True)        
-        
-        return candidates[candidate_indices[0]]
+        # def mean_chroma_3d(path):
+        #     # Return the mean chroma of a path
+        #     return np.mean([np.sqrt(node[1]**2 + node[2]**2) for node in path])
+
+        # # Sort the candidate indices by largest total variation and lipschitz constant
+        # candidate_indices = list(range(len(candidates)))
+        # candidate_indices.sort(key=lambda i: (mean_chroma_3d(candidates[i]), total_variation_3d(candidates[i])), reverse=True)        
+        return candidates
 
 
-    def get_path(self):
-        if self.path is None:
+    def get_paths(self):
+        if self.paths is None:
             self.add_edges()
-            self.path = self.find_path()
+            self.paths = self.find_paths()
             
-        return self.path
+        return self.paths
         
 
 # Test the planner

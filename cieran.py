@@ -6,6 +6,8 @@ import numpy as np
 from coloraide import Color
 from matplotlib.colors import ListedColormap
 
+from utils import lipschitz_3d, total_variation_3d
+
 class Cieran:
     # Uses the Planning and Rampling classes to draw a curve through waypoints, avoiding obstacles with radius r, and truncating the front and back of the curve
     def __init__(self, waypoints, obstacles=[], rad_obstacles=0, truncate_front=20, truncate_back=20, min_c=0):
@@ -18,10 +20,26 @@ class Cieran:
 
         # Create a planner and ramper
         self.planner = Planning(self.waypoints, self.obstacles, self.rad_obstacles, 1000, min_c=self.min_c)
-        self.ramper = Ramping(self.planner.get_path(), self.truncate_front, self.truncate_back)
 
-        # Execute the ramper
-        self.ramper.execute()
+        self.paths = self.planner.get_paths()
+        self.rampers = []
+
+        for candidate in self.paths:
+            ramper = Ramping(candidate, self.truncate_front, self.truncate_back)
+            ramper.execute()
+            self.rampers.append(ramper)
+
+        def mean_chroma(path):
+            # Return the mean chroma of a path
+            return np.mean([np.sqrt(node[1]**2 + node[2]**2) for node in path])
+
+        # Sort indices of ramper.paths by mean chroma, lipschitz constant, and total variation
+        self.ramper_indices = list(range(len(self.rampers)))
+        self.ramper_indices.sort(key=lambda i: (-10*lipschitz_3d(self.rampers[i].path) - 10* total_variation_3d(self.rampers[i].path)), reverse=True)
+
+        # Set the best ramper
+        self.ramper = self.rampers[self.ramper_indices[0]]
+        self.path = self.paths[self.ramper_indices[0]]
 
         # Convert to hex using Coloraide
         path = [self.lab_to_rgb(p).to_string(hex=True) for p in self.ramper.path]
@@ -176,10 +194,10 @@ class Cieran:
 
         if len(self.planner.waypoints) > 0:
             # waypoints in their color values in cielab
-            waypoints_proj = np.array(self.planner.path)[:, [1, 2]]
+            waypoints_proj = np.array(self.path)[:, [1, 2]]
             ax1.scatter(
                 *zip(*waypoints_proj), 
-                c=[Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3] for centroid in self.planner.path]
+                c=[Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3] for centroid in self.path]
             )
 
         # path in green
@@ -204,7 +222,7 @@ class Cieran:
         ax = fig.add_subplot(111, projection='3d')
 
         # obstacles in red
-        ax.scatter(*zip(*self.planner.obstacles), c='r')
+        # ax.scatter(*zip(*self.planner.obstacles), c='r')
 
         # get indices of waypoints in samples
         waypoint_indices = [np.where((self.planner.samples == waypoint).all(axis=1))[0][0] for waypoint in self.planner.path]
@@ -225,3 +243,12 @@ class Cieran:
         ax.plot(*zip(*self.ramper.path), c='g')
         
         plt.show()    
+
+
+if __name__ == '__main__':
+    waypoints = [[26.6128, 37.85, -44.51], [69.2, -7.569, -24.114]]
+    obstacles = []
+
+    cieran = Cieran(waypoints, obstacles, rad_obstacles=20, truncate_front=30, truncate_back=90, min_c=0)
+
+    cieran.plot()

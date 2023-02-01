@@ -7,6 +7,10 @@ from itertools import count
 def lipschitz(list_a):
     return max([abs(list_a[i] - list_a[i+1]) for i in range(len(list_a)-1)])
 
+def dist(a, b):
+    (x1, y1) = a
+    (x2, y2) = b
+    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
 
 def total_variation(list_a):
     return sum([abs(list_a[i] - list_a[i+1]) for i in range(len(list_a)-1)])
