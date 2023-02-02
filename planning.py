@@ -114,6 +114,16 @@ class Planning:
         return True
 
 
+    def find_path(self):
+        # In this version, implement a reinforcement learning approachs
+        # Use a greedy approach to find the shortest path
+        pass
+
+
+    def eps_greedy(self, state, choice, actions, eps):
+        
+
+
     def find_paths(self):
         # find a path from start to end through waypoints using A* and return the path
 

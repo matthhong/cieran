@@ -1,8 +1,27 @@
 
 import random
+import numpy
 # Find shortest path in a graph using reinforcement learning
 # QLearning: graph, source, target, weight, alpha, gamma, epsilon, lambd -> path
 
+def total_variation_3d(lst):
+    # Find the total variation of a list of 3d points
+    return sum([abs(lst[i][0] - lst[i+1][0]) + abs(lst[i][1] - lst[i+1][1]) + abs(lst[i][2] - lst[i+1][2]) for i in range(len(lst)-1)])
+
+def min_a(lst):
+    return min([i[1] for i in lst])
+
+def max_a(lst):
+    return max([i[1] for i in lst])
+
+def min_b(lst):
+    return min([i[2] for i in lst])
+
+def max_b(lst):
+    return max([i[2] for i in lst])
+
+def feature_func(traj):
+    return [total_variation_3d(traj), min_a(traj), max_a(traj), min_b(traj), max_b(traj)]
 
 class QLearning:
 
@@ -17,26 +36,46 @@ class QLearning:
         self.lr = 1
         self.discount = 1
 
+        self.state = self.source
+        self.trajectory = [self.state]
+        self.next_state = None
+
     def run(self):
-        state = self.source
+        while self.state != self.target:
+            self.choose_action(self.state)
+            self.Q[(self.state, self.next_state)] = self.state_action_value + self.lr * self.temporal_difference
+            self.state = self.next_state
 
-        while state != self.target:
-            next_state = self.choose_action(state)
-            if next_state is None:
-                # Should never happen
-                raise Exception("Target cannot be reached")
+    def reset(self):
+        self.state = self.source
+        self.trajectory = [self.state]
+        self.next_state = None
 
-            reward = -self.graph[state][next_state][self.weight]
+    @property
+    def state_action_value(self):
+        return self.Q.get((self.state, self.next_state), 0)
 
-            state_action_value = self.Q.get((state, next_state), 0) 
+    @property
+    def reward(self):
+        # return -self.graph[self.state][self.next_state][self.weight]
+        return 0
 
-            value_update = reward + self.discount * self.utility(next_state) - state_action_value
-            self.Q[(state, next_state)] = state_action_value + self.lr * value_update
-            state = next_state
+    @property
+    def temporal_difference(self):
+        return self.reward + self.discount * self.utility(self.next_state) - self.state_action_value
 
     def utility(self, state):
         if state == self.target:
-            return 10
+            u = {
+                'ABDE': 100,
+                'ACDE': 20,
+                'ABCE': 10,
+                'ACE': 20,
+                'ABCE': 40,
+                'ABCDE': 50,
+            }
+            return u[''.join(self.trajectory)]
+            # return 10
         else:
             return self.max_Q(state)[0]
 
@@ -52,7 +91,11 @@ class QLearning:
         return max_q, max_neighbor
 
     def choose_action(self, state):
-        return self.greedy_epsilon(state)
+        self.next_state = self.greedy_epsilon(state)
+        if self.next_state is None:
+            # Should never happen
+            raise Exception("Target cannot be reached")
+        self.trajectory.append(self.next_state)
 
     def greedy_epsilon(self, state):
         neighbors = list(self.graph.neighbors(state))
@@ -85,29 +128,18 @@ class QLambdaLearning(QLearning):
         self.decay = lambd
 
     def run(self):
-        state = self.source
         eligibility = {}
 
-        while state != self.target:
-            next_state = self.choose_action(state)
-            if next_state is None:
-                # Should never happen
-                raise Exception("Target cannot be reached")
-
-            reward = -self.graph[state][next_state][self.weight]
-
-            state_action_value = self.Q.get((state, next_state), 0) 
-
-            value_update = reward + self.discount * self.utility(next_state) - state_action_value
+        while self.state != self.target:
+            self.choose_action(self.state)
             
-            eligibility[(state, next_state)] = eligibility.get((state, next_state), 0) + 1
+            eligibility[(self.state, self.next_state)] = eligibility.get((self.state, self.next_state), 0) + 1
 
-            # Update eligibility
             for a, b in self.graph.edges:
                 eligibility[(a,b)] = eligibility.get((a,b), 0) * self.decay * self.discount
-                self.Q[(a,b)] = self.Q.get((a,b), 0) + self.lr * value_update * eligibility[(a,b)]
+                self.Q[(a,b)] = self.Q.get((a,b), 0) + self.lr * self.temporal_difference * eligibility[(a,b)]
 
-            state = next_state
+            self.state = self.next_state
 
 
 # Iterate 10000 epochs
@@ -128,9 +160,10 @@ if __name__=='__main__':
 
     # Learn
     epochs = 1000
-    env = QLearning(G, "A", "E")
+    env = QLambdaLearning(G, "A", "E")
     for i in range(epochs):
         env.run()
+        env.reset()
 
     # Get the path
     path = env.get_best_path()
