@@ -24,25 +24,21 @@ class QLearning:
             next_state = self.choose_action(state)
             if next_state is None:
                 # Should never happen
-                breakpoint()
                 raise Exception("Target cannot be reached")
 
             reward = -self.graph[state][next_state][self.weight]
 
-            # Update Q
-            Q_value = self.Q.get((state, next_state), 0) 
+            state_action_value = self.Q.get((state, next_state), 0) 
 
-            if next_state == self.target:
-                utility = 10
-            else:
-                utility = self.max_Q(next_state)[0]
-
-            Q_update = self.lr * (reward + self.discount * utility - self.Q.get((state, next_state), 0))
-            self.Q[(state, next_state)] = Q_value + Q_update
-
+            value_update = reward + self.discount * self.utility(next_state) - state_action_value
+            self.Q[(state, next_state)] = state_action_value + self.lr * value_update
             state = next_state
 
-        return state
+    def utility(self, state):
+        if state == self.target:
+            return 10
+        else:
+            return self.max_Q(state)[0]
 
     def max_Q(self, state):
         # Find the maximum value in Q for a given (node, neighbor)
@@ -59,7 +55,6 @@ class QLearning:
         return self.greedy_epsilon(state)
 
     def greedy_epsilon(self, state):
-        # Choose a neighbor
         neighbors = list(self.graph.neighbors(state))
         if len(neighbors) == 0:
             return None
@@ -69,13 +64,7 @@ class QLearning:
             return random.choice(neighbors)
 
         # Choose the neighbor with the highest Q value
-        max_q = -float('inf')
-        max_neighbor = None
-        for neighbor in neighbors:
-            q = self.Q.get((state, neighbor), 0)
-            if q > max_q:
-                max_q = q
-                max_neighbor = neighbor
+        max_neighbor = self.max_Q(state)[1]
         
         return max_neighbor
 
@@ -87,6 +76,38 @@ class QLearning:
             state = self.max_Q(state)[1]
             path.append(state)
         return path
+
+
+class QLambdaLearning(QLearning):
+
+    def __init__(self, graph, source, target, weight='weight', epsilon=0.1, lambd=0.9):
+        super().__init__(graph, source, target, weight, epsilon)
+        self.decay = lambd
+
+    def run(self):
+        state = self.source
+        eligibility = {}
+
+        while state != self.target:
+            next_state = self.choose_action(state)
+            if next_state is None:
+                # Should never happen
+                raise Exception("Target cannot be reached")
+
+            reward = -self.graph[state][next_state][self.weight]
+
+            state_action_value = self.Q.get((state, next_state), 0) 
+
+            value_update = reward + self.discount * self.utility(next_state) - state_action_value
+            
+            eligibility[(state, next_state)] = eligibility.get((state, next_state), 0) + 1
+
+            # Update eligibility
+            for a, b in self.graph.edges:
+                eligibility[(a,b)] = eligibility.get((a,b), 0) * self.decay * self.discount
+                self.Q[(a,b)] = self.Q.get((a,b), 0) + self.lr * value_update * eligibility[(a,b)]
+
+            state = next_state
 
 
 # Iterate 10000 epochs
@@ -114,3 +135,4 @@ if __name__=='__main__':
     # Get the path
     path = env.get_best_path()
     print("Best path: {}".format(path))
+    breakpoint()
