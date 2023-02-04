@@ -43,7 +43,7 @@ class KDTree:
         try:
             distances, points = np.array(queue.queue).T
         except:
-            breakpoint()
+            raise Exception("No points found in tree")
         return -distances, np.stack(points)
 
 

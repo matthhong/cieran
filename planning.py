@@ -120,11 +120,7 @@ class Planning:
         pass
 
 
-    def eps_greedy(self, state, choice, actions, eps):
-        
-
-
-    def find_paths(self):
+    def find_path(self):
         # find a path from start to end through waypoints using A* and return the path
 
         # Iterate over the waypoints and run A* between each pair of waypoints
@@ -132,51 +128,24 @@ class Planning:
 
         wps = self.waypoints.copy()
 
-        # Store 10 different options for each waypoint pair
-        subpaths = [[]] * (len(wps) - 1)
+        while len(wps) > 1:
+            # Run A* between the first waypoint and the rest of the waypoints
+            start = wps[0]
+            end = wps[1]
+            wps = wps[1:]
 
-        for i in range(len(wps) - 1):
-            options = shortest_simple_paths(self.graph, tuple(wps[i]), tuple(wps[i + 1]), 'weight')
-            # import pdb; pdb.set_trace()
-
-            subpaths[i] = list(option[1:] for option in islice(options, 8))
-
-        # Create a list of all possible paths by taking one subpath from each element in subpaths
-        candidates = []
-        for path in product(*subpaths):
-            path = list(path)
-            path = [item for sublist in path for item in sublist]
-            path = [(0.0,0.0,0.0)] + path
-            # path = path[:-1]
-            candidates.append(path)
-
-        # lch_candidates = []
-        # # Convert each candidate path to polar coordinates
-        # for candidate in candidates:
-        #     lch_candidate = []
-        #     for node in candidate:
-        #         l, a, b = node
-        #         c = np.sqrt(a**2 + b**2)
-        #         h = np.arctan2(b, a)
-        #         lch_candidate.append((l, c, h))
-        #     lch_candidates.append(lch_candidate)
-
-        # def mean_chroma_3d(path):
-        #     # Return the mean chroma of a path
-        #     return np.mean([np.sqrt(node[1]**2 + node[2]**2) for node in path])
-
-        # # Sort the candidate indices by largest total variation and lipschitz constant
-        # candidate_indices = list(range(len(candidates)))
-        # candidate_indices.sort(key=lambda i: (mean_chroma_3d(candidates[i]), total_variation_3d(candidates[i])), reverse=True)        
-        return candidates
+            # Run A* to find the shortest path between start and end
+            path += astar_path(self.graph, tuple(start), tuple(end), weight='weight')[1:]
+        breakpoint()
+        return path
 
 
-    def get_paths(self):
+    def get_path(self):
         if self.paths is None:
             self.add_edges()
-            self.paths = self.find_paths()
+            self.path = self.find_path()
             
-        return self.paths
+        return self.path
         
 
 # Test the planner
