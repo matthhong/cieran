@@ -68,11 +68,11 @@ class QLearning:
         if state == self.target:
             u = {
                 'ABDE': 100,
-                'ACDE': 20,
-                'ABCE': 10,
+                'ACDE': 100,
+                'ABCE': 30,
                 'ACE': 20,
                 'ABCE': 40,
-                'ABCDE': 50,
+                'ABCDE': 40,
             }
             return u[''.join(self.trajectory)]
             # return 10
@@ -161,8 +161,17 @@ if __name__=='__main__':
     # Learn
     epochs = 1000
     env = QLambdaLearning(G, "A", "E")
+    
+    Q = env.Q.copy()
     for i in range(epochs):
         env.run()
+        # Test for convergence on Q table values
+        if i % 100 == 0:
+            print("Epoch {}".format(i))
+            print("Q table: {}".format(env.Q))
+            print("Q table diff: {}".format({k: env.Q[k] - Q[k] for k in env.Q.keys() & Q.keys()}))
+            print("Best path: {}".format(env.get_best_path()))
+            Q = env.Q.copy()
         env.reset()
 
     # Get the path
