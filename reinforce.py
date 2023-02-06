@@ -22,11 +22,17 @@ def max_b(lst):
 
 def feature_func(traj):
     return [total_variation_3d(traj), min_a(traj), max_a(traj), min_b(traj), max_b(traj)]
+    
 
 class QLearning:
 
-    def __init__(self, graph, source, target, weight='weight', epsilon=0.1):
+    def __init__(self, graph, source, target=None, weight='weight', epsilon=0.1):
         self.graph = graph
+
+        self.state_actions = {}
+        for node in self.graph.nodes():
+            self.state_actions[node] = list(self.graph.neighbors(node))
+        
         self.source = source
         self.target = target
         self.weight = weight
@@ -36,15 +42,16 @@ class QLearning:
         self.lr = 1
         self.discount = 1
 
-        self.state = self.source
-        self.trajectory = [self.state]
-        self.next_state = None
+        self.reset()
 
     def run(self):
-        while self.state != self.target:
+        while not self.terminal(self.state):
             self.choose_action(self.state)
             self.Q[(self.state, self.next_state)] = self.state_action_value + self.lr * self.temporal_difference
-            self.state = self.next_state
+            self.set_state(self.next_state)
+
+    def set_state(self, state):
+        self.state = state
 
     def reset(self):
         self.state = self.source
@@ -57,25 +64,22 @@ class QLearning:
 
     @property
     def reward(self):
-        # return -self.graph[self.state][self.next_state][self.weight]
-        return 0
+        try:
+            return -self.graph[self.state][self.next_state][self.weight]
+        except:
+            breakpoint()
+        # return 0
 
     @property
     def temporal_difference(self):
         return self.reward + self.discount * self.utility(self.next_state) - self.state_action_value
 
+    def terminal(self, state):
+        return len(self.state_actions[state]) == 0
+
     def utility(self, state):
-        if state == self.target:
-            u = {
-                'ABDE': 100,
-                'ACDE': 100,
-                'ABCE': 30,
-                'ACE': 20,
-                'ABCE': 40,
-                'ABCDE': 40,
-            }
-            return u[''.join(self.trajectory)]
-            # return 10
+        if self.terminal(state):
+            return 10
         else:
             return self.max_Q(state)[0]
 
@@ -92,19 +96,12 @@ class QLearning:
 
     def choose_action(self, state):
         self.next_state = self.greedy_epsilon(state)
-        if self.next_state is None:
-            # Should never happen
-            raise Exception("Target cannot be reached")
         self.trajectory.append(self.next_state)
 
     def greedy_epsilon(self, state):
-        neighbors = list(self.graph.neighbors(state))
-        if len(neighbors) == 0:
-            return None
-        
         # Choose a random neighbor
         if random.random() < self.epsilon:
-            return random.choice(neighbors)
+            return random.choice(self.state_actions[state])
 
         # Choose the neighbor with the highest Q value
         max_neighbor = self.max_Q(state)[1]
@@ -115,7 +112,7 @@ class QLearning:
         # Get path that maximizes Q at each step
         path = [self.source]
         state = self.source
-        while state != self.target:
+        while not self.terminal(state):
             state = self.max_Q(state)[1]
             path.append(state)
         return path
@@ -160,7 +157,7 @@ if __name__=='__main__':
 
     # Learn
     epochs = 1000
-    env = QLambdaLearning(G, "A", "E")
+    env = QLearning(G, "A", "E")
     
     Q = env.Q.copy()
     for i in range(epochs):
