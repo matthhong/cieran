@@ -5,95 +5,82 @@ from KDTree import KDTree
 from scipy.stats.qmc import Halton
 # from scipy.cluster import KMeans
 
-def custom_round(x, base=10):
-    nearest = base * np.round(x / base)
-    # nearest = x
-    if x >= 0:
-        return np.floor(nearest)
-    else:
-        return np.ceil(nearest)
+# def custom_round(x, base=10):
+#     nearest = base * np.round(x / base)
+#     # nearest = x
+#     if x >= 0:
+#         return np.floor(nearest)
+#     else:
+#         return np.ceil(nearest)
 
 class CrowdsourcedStates:
 
     RAMPS_FILE = 'ramps.csv'
     CENTROID_FILE = 'centroids.txt'
+    START = np.array([100, 0, 0])
+    END = np.array([0, 0, 0])
 
     def __init__(self, color):
         self.color = color
         self.ramps = self.load_ramps()
-        # self.centroids = self.load_centroids()
+        self.centroids = self.load_centroids()
 
         self.graph = nx.DiGraph()
 
-        rounded_color = [custom_round(x) for x in self.color]
-        diff = np.array(rounded_color) - np.array(self.color)
+        # rounded_color = [custom_round(x) for x in self.color]
+        # diff = np.array(rounded_color) - np.array(self.color)
 
         # fit the ramps to the given color
-        translated_ramp = []
         self.fitted_ramps = []
+        tree = KDTree(self.centroids)
         num_out_of_gamut = 0
         for ramp in self.ramps:
             translated_ramp = self.fit_ramp_to_color(ramp, self.color)   
 
-            out_of_gamut = False
+            new_ramp = []
+
+            last_centroid = None
             # Check if every point in the ramp is in gamut
             for i in range(len(translated_ramp)):
                 point = translated_ramp[i]
                 # round the point to the nearest integer
-                point = [custom_round(x) - diff[i] for i, x in enumerate(point)]
-                if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
-                    if not out_of_gamut:
-                        num_out_of_gamut += 1
-                    out_of_gamut = True
+                # point = [custom_round(x) - diff[i] for i, x in enumerate(point)]
+
+                # Find the nearest centroid to the point using KDTree
+                tree = KDTree(self.centroids)
+                nearest_centroid = tree.query(point, k=1)[1][0]
+                # if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
+                #     if not out_of_gamut:
+                #         num_out_of_gamut += 1
+                #     out_of_gamut = True
                 # self.graph.add_node(tuple(point))
-                if not out_of_gamut:
-                    translated_ramp[i] = np.array(point)
-            
-            if out_of_gamut:
-                continue
-            self.fitted_ramps.append(translated_ramp)
+                # if not out_of_gamut:
+                # breakpoint()
+                if last_centroid is not None:
+                    # Compare the first element between the last centroid and the current centroid
+                    l_diff = last_centroid[0] - nearest_centroid[0]
+                    if l_diff > 0:
+                        continue
+                new_ramp.append(nearest_centroid)
+                last_centroid = nearest_centroid
         
-        # flattened = [item for sublist in self.fitted_ramps for item in sublist]
-        # l_channel = np.array([point[0] for point in flattened])
-        # l_channel = l_channel.reshape(-1, 1)
-
-        # kmeans = KMeans(n_clusters=6)
-        # kmeans.fit(l_channel)
-        # labels = kmeans.labels_
-
-        # # Determine the cluster centers and assign each color vector to the nearest cluster
-        # cluster_centers = kmeans.cluster_centers_
-        # labels = np.array([np.argmin(np.abs(cluster_centers - l)) for l in l_channel])
-
-        # # Replace each color vector in the image with the mean color of its cluster
-        # new_colors = np.array([cluster_centers[labels[i]] for i in range(labels.shape[0])])
-        # new_colors = np.concatenate((new_colors, lab_colors[:, 1:]), axis=1)
-
-        breakpoint()
+            self.fitted_ramps.append(new_ramp)
+        
         print("num ramps: " + str(len(self.fitted_ramps)))
         print("num out of gamut: " + str(num_out_of_gamut))
-        # # Create a KDTree
-        # tree = KDTree(self.centroids)
-
-        # # Find the closest centroid to each ramp point and replace the ramp point with the centroid
-        # # (except the seed color)
-        # for ramp in self.fitted_ramps:
-        #     for i in range(len(ramp)):
-        #         # If the ramp point is the seed color, don't replace it. use np.all
-        #         if np.all(ramp[i] == self.color):
-        #             continue
-        #         try:
-        #             neighbor = tree.query(ramp[i], 1)[1][0]
-        #         except:
-        #             continue
-
-        #         ramp[i] = neighbor
         
         # Add the ramp points to the graph, and edges between adjacent ramp points
-        for ramp in self.fitted_ramps:
-            for i in range(1, len(ramp)):
-                distance = np.linalg.norm(ramp[i-1] - ramp[i])
-                self.graph.add_edge(tuple(ramp[i-1]), tuple(ramp[i]), weight=distance)
+        for i, ramp in enumerate(self.fitted_ramps):
+            # Put start and end points into the ramp
+            self.fitted_ramps[i] = [self.END] + ramp + [self.START]
+            ramp = self.fitted_ramps[i]
+            for i in range(len(ramp)-1, 0, -1):
+                distance = np.linalg.norm(ramp[i] - ramp[i-1])
+                if ramp[i] == self.END or ramp[i-1] == self.START:
+                    distance = 0
+                self.graph.add_edge(tuple(ramp[i]), tuple(ramp[i-1]), weight=distance)
+
+        self.longest_path_length = nx.dag_longest_path_length(self.graph)
     
 
     def load_centroids(self):
@@ -215,3 +202,5 @@ if __name__ == "__main__":
     ax.set_zlabel('B')
 
     plt.show()
+
+    breakpoint()
