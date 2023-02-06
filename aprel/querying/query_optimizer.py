@@ -59,7 +59,9 @@ class QueryOptimizerDiscreteTrajectorySet(QueryOptimizer):
             int: The index of the optimal trajectory in the trajectory set.
         """
         if isinstance(user, SoftmaxUser):
-            return np.asscalar(np.argmax(user.reward(self.trajectory_set)))
+            # return np.asscalar(np.argmax(user.reward(self.trajectory_set)))
+            # breakpoint()
+            return np.argmax(user.reward(self.trajectory_set)).item()
         raise NotImplementedError("The planner has not been implemented for the given user model.")
 
     def planner(self, user: User) -> Trajectory:

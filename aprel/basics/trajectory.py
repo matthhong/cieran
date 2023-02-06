@@ -39,11 +39,13 @@ class Trajectory:
         clip_path (str): The path to the video clip that keeps the visualization of the trajectory.
     """
     def __init__(self, env, trajectory: List[np.array], clip_path: str = None):
-        self.trajectory = trajectory
+        # Remove first and last points of trajectory
+        self.trajectory = trajectory[1:-1]
         self.features = []
-        self.features.append(path_length(trajectory, env))
-        self.features.append(path_a_range(trajectory))
-        self.features.append(path_b_range(trajectory))
+        self.features.append(path_length(self.trajectory, env))
+        self.features.append(path_a_range(self.trajectory))
+        self.features.append(path_b_range(self.trajectory))
+        self.features = np.array(self.features)
 
         self.clip_path = clip_path
         

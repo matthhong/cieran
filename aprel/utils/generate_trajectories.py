@@ -3,7 +3,7 @@
 from typing import List, Union
 import pickle
 import numpy as np
-from moviepy.editor import ImageSequenceClip
+# from moviepy.editor import ImageSequenceClip
 import warnings
 import os
 
@@ -63,39 +63,50 @@ def generate_trajectories_randomly(env: Environment,
     if trajectories.size >= num_trajectories:
         trajectories = TrajectorySet(trajectories[:num_trajectories])
     else:
-        env_has_rgb_render = env.render_exists and not headless
-        if env_has_rgb_render and not os.path.exists('aprel_trajectories/clips'):
-            os.makedirs('aprel_trajectories/clips')
-        env.action_space.seed(seed)
-        for traj_no in range(trajectories.size, num_trajectories):
-            traj = []
+        # env_has_rgb_render = env.render_exists and not headless
+        # if env_has_rgb_render and not os.path.exists('aprel_trajectories/clips'):
+        #     os.makedirs('aprel_trajectories/clips')
+        # env.action_space.seed(seed)
+
+        # Trajectories must be unique
+        unique_trajectories = set()
+        while len(trajectories.trajectories) < num_trajectories:
             obs = env.reset()
-            if env_has_rgb_render:
-                try:
-                    frames = [np.uint8(env.render(mode='rgb_array'))]
-                except:
-                    env_has_rgb_render = False
-            done = False
-            t = 0
-            while not done and t < max_episode_length:
-                act = env.action_space.sample()
-                if not t:
-                    obs = obs[0]
-                traj.append((obs,act))
-                obs, _, done, _, info = env.step(act)
-                t += 1
-                if env_has_rgb_render:
-                    frames.append(np.uint8(env.render(mode='rgb_array')))
-            traj.append((obs, None))
-            if env_has_rgb_render:
-                clip = ImageSequenceClip(frames, fps=30)
-                clip_path = 'aprel_trajectories/clips/' + file_name + '_' + str(traj_no) + '.mp4'
-                clip.write_videofile(clip_path, audio=False)
-            else:
-                clip_path = None
-            trajectories.append(Trajectory(env, traj, clip_path))
-            if env.close_exists:
-                env.close()
+            # if env_has_rgb_render:
+            #     try:
+            #         frames = [np.uint8(env.render(mode='rgb_array'))]
+            #     except:
+            #         env_has_rgb_render = False
+            # done = False
+            # t = 0
+            # while not done and t < max_episode_length:
+            #     act = env.action_space.sample()
+            #     if not t:
+            #         obs = obs[0]
+            #     traj.append((obs,act))
+            #     obs, _, done, _, info = env.step(act)
+            #     t += 1
+            #     if env_has_rgb_render:
+            #         frames.append(np.uint8(env.render(mode='rgb_array')))
+            traj = env.random_walk()
+            # traj.append((obs, None))
+            # if env_has_rgb_render:
+            #     clip = ImageSequenceClip(frames, fps=30)
+            #     clip_path = 'aprel_trajectories/clips/' + file_name + '_' + str(traj_no) + '.mp4'
+            #     clip.write_videofile(clip_path, audio=False)
+            # else:
+            #     clip_path = None
+            unique_trajectories.add(str(traj))
+
+            if len(unique_trajectories) < len(trajectories.trajectories) + 1:
+                continue
+
+            trajectories.append(Trajectory(env, traj))
+            # if env.close_exists:
+            #     env.close()
+        # for traj in trajectories:
+        #     trajectory_objects.append(Trajectory(env, traj))
+        # trajectories = TrajectorySet(trajectories)
 
     with open('aprel_trajectories/' + file_name + '.pkl', 'wb') as f:
         pickle.dump(trajectories, f)
