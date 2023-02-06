@@ -12,6 +12,95 @@ import numpy as np
 import time
 
 from aprel.basics import Trajectory, TrajectorySet
+from matplotlib import pyplot as plt
+from matplotlib.colors import ListedColormap
+
+from geomdl import fitting
+
+from coloraide import Color
+    
+
+t = np.linspace(0, 2 * np.pi, 1024)
+data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
+
+
+class Ramping:
+
+    def __init__(self, control_points, truncate_front=0, truncate_back=0):
+        self.truncate_front = truncate_front
+        self.truncate_back = truncate_back
+
+        self.control_points = control_points
+        self.ramp = None
+        self.path = []
+        self.cmap = None
+
+    def generate_control_points(self):
+        pass
+
+    def interpolate(self, mode='cubic'):
+        # interpolate between points using cubic splines with centripetal parameterization
+        # save the ramp
+        self.generate_control_points()
+
+        if mode == 'cubic':
+            # Do global curve interpolation
+            self.ramp = fitting.interpolate_curve(self.control_points, 3, centripetal=True)
+            
+    # def truncate(self):
+    #     # truncate the ramp at the start and end given truncate_front and truncate_back (in percent)
+        
+    #     # truncate the front
+    #     # breakpoint()
+    #     self.ramp.knotvector = self.ramp.knotvector[round(self.truncate_front * len(self.ramp.knotvector)):len(self.ramp.knotvector) - round(self.truncate_back * len(self.ramp.knotvector))]
+
+    def lab_to_rgb(self, lab):
+        # Convert a CIELAB value to an RGB value
+        return Color("lab({}% {} {} / 1)".format(*lab)).convert("srgb")
+
+    def execute(self):
+        # execute the ramp
+        self.interpolate()
+        # self.truncate()
+    
+        # Get points from the interpolated geomdl ramp
+        # However, the distance between points is not constant,
+        # so we need to normalize the distance between points using arc length
+        # We want to parameterize by t', which measures normalized arclength.
+
+        # Get the points from the ramp
+        t = np.linspace(0, 1, 1000)
+        at = np.linspace(0, 1, 1000)
+        points = self.ramp.evaluate_list(at)
+
+        # Get the arc length of the ramp at each point using distance function
+        arc_lengths = [0]
+        for i in range(1, len(points)):
+            arc_lengths.append(arc_lengths[i-1] + self.distance(points[i-1], points[i]))
+
+        # Normalize the arc lengths
+        arc_lengths = np.array(arc_lengths) / arc_lengths[-1]
+
+        # Invert the arc lengths to get the parameterization
+        at_t = np.interp(at, arc_lengths, t)
+
+        # Get the points from the ramp using the parameterization
+        self.path = self.ramp.evaluate_list(at_t)
+
+        # Truncate the front and back of the path based on the first element of each point (e.g. cut if L* is less than 0.2)
+        # self.path = [point for point in self.path if point[0] > self.truncate_front and point[0] < self.truncate_back]
+
+
+        # # Truncate the front and back of the path
+        # self.path = self.path[round(self.truncate_front * len(self.path)):len(self.path) - round(self.truncate_back * len(self.path))]
+        #         self.path = [self.lab_to_rgb(p).to_string(hex=True) for p in self.path]
+        self.path = [self.lab_to_rgb(p).to_string(hex=True) for p in self.path]
+
+        # convert to ListedColormap
+        self.cmap = ListedColormap(self.path)
+
+    def distance(self, p1, p2):
+        return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')
 
 
 class Query:
@@ -195,10 +284,11 @@ class WeakComparisonQuery(Query):
     Raises:
         AssertionError: if slate does not have exactly 2 trajectories.
     """
-    def __init__(self, slate: Union[TrajectorySet, List[Trajectory]]):
+    def __init__(self, slate: Union[TrajectorySet, List[Trajectory]], chart=None):
         super(WeakComparisonQuery, self).__init__()
         assert isinstance(slate, TrajectorySet) or isinstance(slate, list), 'Query constructor requires a TrajectorySet object for the slate.'
         self.slate = slate
+        self.chart = chart
         assert(self.K == 2), 'Weak comparison queries can only be pairwise comparisons, but ' + str(self.K) + ' trajectories were given.'
     
     @property
@@ -222,10 +312,26 @@ class WeakComparisonQuery(Query):
         Returns:
             int: The response of the user.
         """
-        for i in range(self.K):
-            print('Playing trajectory #' + str(i))
-            time.sleep(delay)
-            self.slate[i].visualize()
+        # for i in range(self.K):
+        #     print('Playing trajectory #' + str(i))
+        #     time.sleep(delay)
+        #     self.slate[i].visualize()
+        if self.chart is None:
+            ramp1 = Ramping(self.slate[0].trajectory)
+            ramp2 = Ramping(self.slate[1].trajectory)
+            ramp1.execute()
+            ramp2.execute()
+
+            # Show the ramps side by side
+            fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+            im1=ax[0].imshow(data2d, cmap=ramp1.cmap)
+            im2=ax[1].imshow(data2d, cmap=ramp2.cmap)
+            # Show colorbars for both charts
+            fig.colorbar(im1, ax=ax[0])
+            fig.colorbar(im2, ax=ax[0])
+
+            plt.show()
+
         selection = None
         while selection is None:
             selection = input('Which trajectory is the best? Enter a number (-1 for "About Equal"): ')

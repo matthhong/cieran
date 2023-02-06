@@ -4,7 +4,6 @@ from geomdl.visualization import VisMPL as vis
 import numpy as np
 import math
 from coloraide import Color
-from matplotlib.colors import ListedColormap
     
 class Ramping:
 
@@ -15,7 +14,6 @@ class Ramping:
         self.control_points = control_points
         self.ramp = None
         self.path = []
-        self.cmap = None
 
     def generate_control_points(self):
         pass
@@ -36,10 +34,6 @@ class Ramping:
     #     # truncate the front
     #     # breakpoint()
     #     self.ramp.knotvector = self.ramp.knotvector[round(self.truncate_front * len(self.ramp.knotvector)):len(self.ramp.knotvector) - round(self.truncate_back * len(self.ramp.knotvector))]
-
-    def lab_to_rgb(self, lab):
-        # Convert a CIELAB value to an RGB value
-        return Color("lab({}% {} {} / 1)".format(*lab)).convert("srgb")
 
     def execute(self):
         # execute the ramp
@@ -75,12 +69,7 @@ class Ramping:
 
 
         # Truncate the front and back of the path
-        # self.path = self.path[round(self.truncate_front * len(self.path)):len(self.path) - round(self.truncate_back * len(self.path))]
-
-        self.path = [self.lab_to_rgb(p).to_string(hex=True) for p in self.path]
-
-        # convert to ListedColormap
-        self.cmap = ListedColormap(path)
+        self.path = self.path[round(self.truncate_front * len(self.path)):len(self.path) - round(self.truncate_back * len(self.path))]
 
     def distance(self, p1, p2):
         return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')

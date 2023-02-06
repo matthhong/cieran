@@ -3,22 +3,27 @@ import numpy as np
 import networkx as nx
 from KDTree import KDTree
 from scipy.stats.qmc import Halton
-# from scipy.cluster import KMeans
+from typing import Callable, List, Tuple
+import random
 
-# def custom_round(x, base=10):
-#     nearest = base * np.round(x / base)
-#     # nearest = x
-#     if x >= 0:
-#         return np.floor(nearest)
-#     else:
-#         return np.ceil(nearest)
+import pkg_resources
 
-class CrowdsourcedStates:
+RAMPS_FILE = pkg_resources.resource_filename('aprel', 'basics/ramps.csv')
+START = np.array([100, 0, 0])
+END = np.array([0, 0, 0])
 
-    RAMPS_FILE = 'ramps.csv'
-    CENTROID_FILE = 'centroids.txt'
-    START = np.array([100, 0, 0])
-    END = np.array([0, 0, 0])
+def path_length(path: List[np.array], env) -> float:
+    # Get the edge weights of the path, where an edge is an array of two nodes
+    edge_weights = [env.graph.get_edge_data(tuple(path[i]), tuple(path[i+1]))['weight'] for i in range(len(path) - 1)]
+    return sum(edge_weights) / env.longest_path_length
+
+def path_a_range(path: List[np.array]) -> float:
+    return (max([point[1] for point in path]) - min([point[1] for point in path])) / 255
+
+def path_b_range(path: List[np.array]) -> float:
+    return (max([point[2] for point in path]) - min([point[2] for point in path])) / 255
+
+class GraphEnv:
 
     def __init__(self, color):
         self.color = color
@@ -59,7 +64,7 @@ class CrowdsourcedStates:
                 if last_centroid is not None:
                     # Compare the first element between the last centroid and the current centroid
                     l_diff = last_centroid[0] - nearest_centroid[0]
-                    if l_diff > 0:
+                    if l_diff >= 0:
                         continue
                 new_ramp.append(nearest_centroid)
                 last_centroid = nearest_centroid
@@ -72,11 +77,11 @@ class CrowdsourcedStates:
         # Add the ramp points to the graph, and edges between adjacent ramp points
         for i, ramp in enumerate(self.fitted_ramps):
             # Put start and end points into the ramp
-            self.fitted_ramps[i] = [self.END] + ramp + [self.START]
+            self.fitted_ramps[i] = [END] + ramp + [START]
             ramp = self.fitted_ramps[i]
             for i in range(len(ramp)-1, 0, -1):
                 distance = np.linalg.norm(ramp[i] - ramp[i-1])
-                if ramp[i] == self.END or ramp[i-1] == self.START:
+                if np.all(ramp[i] == END) or np.all(ramp[i-1] == START):
                     distance = 0
                 self.graph.add_edge(tuple(ramp[i]), tuple(ramp[i-1]), weight=distance)
 
@@ -90,7 +95,7 @@ class CrowdsourcedStates:
         #         values = line.replace('\n','').split(' ')
         #         centroids = np.append(centroids, [np.array([float(values[0]), float(values[1]), float(values[2])])], axis=0)
         # return centroids
-        dimensions = [(0,100), (-128,128), (-128,128)]
+        dimensions = [(0,100), (-128,127), (-128,127)]
     
         # Initialize the Halton sampler
         sampler = Halton(len(dimensions))
@@ -117,7 +122,7 @@ class CrowdsourcedStates:
         # Each line is a ramp, where each triplet is a 3D point of LAB color, and there are 9 points per ramp
         # load into np array
         ramps = np.empty((0,9,3))
-        with open(self.RAMPS_FILE, 'r') as f:
+        with open(RAMPS_FILE, 'r') as f:
             for line in f:
                 values =  line.replace('\n','').split(',')
                 ramp = np.empty((0,3))
@@ -173,8 +178,150 @@ class CrowdsourcedStates:
         return translated_curve
 
 
+class QLearning(GraphEnv):
+
+    def __init__(self, color, source, target, weight='weight', epsilon=0.1):
+        super().__init__(color)
+
+        self.state_actions = {}
+        for node in self.graph.nodes():
+            self.state_actions[node] = list(self.graph.neighbors(node))
+        
+        self.source = source
+        self.target = target
+        self.weight = weight
+        self.epsilon = epsilon
+        self.Q = {}
+
+        self.lr = 1
+        self.discount = 1
+        self.reward_weights = np.array([-1,-1,-1])
+
+        self.reset()
+
+    def run(self):
+        while not self.terminal(self.state):
+            self.choose_action(self.state)
+            self.Q[(self.state, self.next_state)] = self.state_action_value + self.lr * self.temporal_difference
+            self.set_state(self.next_state)
+
+    def random_walk(self):
+        while not self.terminal(self.state):
+            self.choose_random_action(self.state)
+            self.set_state(self.next_state)
+        return self.trajectory
+
+    def set_state(self, state):
+        self.state = state
+
+    def reset(self):
+        self.state = self.source
+        self.trajectory = [self.state]
+        self.next_state = None
+
+    @property
+    def state_action_value(self):
+        return self.Q.get((self.state, self.next_state), 0)
+
+    @property
+    def reward(self):
+        try:
+            return -self.graph[self.state][self.next_state][self.weight]
+        except:
+            breakpoint()
+        # return 0
+
+    @property
+    def temporal_difference(self):
+        return self.reward + self.discount * self.utility(self.next_state) - self.state_action_value
+
+    def terminal(self, state):
+        if state is None:
+            breakpoint()
+        return len(self.state_actions[state]) == 0
+
+    def utility(self, state):
+        if self.terminal(state):
+            # Dot product of reward weights and feature vector
+            return np.dot(self.reward_weights, self.feature_vec)
+        else:
+            return self.max_Q(state)[0]
+
+    @property
+    def feature_vec(self):
+        features = []
+        trajectory = self.trajectory[1:-1]
+        features.append(path_length(trajectory, self))
+        features.append(path_a_range(trajectory))
+        features.append(path_b_range(trajectory))
+        return np.array(features)
+
+    def max_Q(self, state):
+        # Find the maximum value in Q for a given (node, neighbor)
+        max_q = -float('inf')
+        max_neighbor = None
+        for neighbor in self.graph.neighbors(state):
+            q = self.Q.get((state, neighbor), 0)
+            if q > max_q:
+                max_q = q
+                max_neighbor = neighbor
+        return max_q, max_neighbor
+
+    def choose_action(self, state):
+        self.next_state = self.greedy_epsilon(state)
+        self.trajectory.append(self.next_state)
+
+    def choose_random_action(self, state):
+        self.next_state = random.choice(self.state_actions[state])
+        self.trajectory.append(self.next_state)
+
+    def greedy_epsilon(self, state):
+        # Choose a random neighbor
+        if random.random() < self.epsilon:
+            return random.choice(self.state_actions[state])
+
+        # Choose the neighbor with the highest Q value
+        max_neighbor = self.max_Q(state)[1]
+        
+        return max_neighbor
+
+    def get_best_path(self):
+        # Get path that maximizes Q at each step
+        path = [self.source]
+        state = self.source
+        while not self.terminal(state):
+            state = self.max_Q(state)[1]
+            path.append(state)
+        return path
+
+
+class Environment(QLearning):
+
+    def __init__(self, color, source=tuple(START), target=tuple(END), weight='weight', epsilon=0.1, lambd=0.9):
+        super().__init__(color, source, target, weight, epsilon)
+        self.decay = lambd
+        self.render_exists = False
+        self.close_exists = False
+
+    def run(self):
+        eligibility = {}
+
+        while self.state != self.target:
+            self.choose_action(self.state)
+            
+            eligibility[(self.state, self.next_state)] = eligibility.get((self.state, self.next_state), 0) + 1
+
+            for a, b in self.graph.edges:
+                eligibility[(a,b)] = eligibility.get((a,b), 0) * self.decay * self.discount
+                self.Q[(a,b)] = self.Q.get((a,b), 0) + self.lr * self.temporal_difference * eligibility[(a,b)]
+
+            self.state = self.next_state
+
+
+
+
 if __name__ == "__main__":
-    states = CrowdsourcedStates([26.6128, 37.85, -44.51])
+    states = GraphEnv([26.6128, 37.85, -44.51])
 
     # Visualize the states in 3D LAB space
     import matplotlib.pyplot as plt

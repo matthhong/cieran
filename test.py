@@ -1,11 +1,70 @@
+# Making APReL work for networkx graphs
+
+# Ideal workflow:
+# trajectory_set = crowdsourced corpus
+# features_func = feature function
+
+import aprel
+import matplotlib as mpl
+
+
+from matplotlib.colors import ListedColormap
 
 from geomdl import fitting
-from geomdl.visualization import VisMPL as vis
-import numpy as np
-import math
+
 from coloraide import Color
-from matplotlib.colors import ListedColormap
+import numpy as np
     
+
+# env = aprel.Environment([26.6128, 37.85, -44.51])
+# env_name = 'Cieran'
+
+# trajectory_set = aprel.generate_trajectories_randomly(env, num_trajectories=100,
+#                                                       max_episode_length=300,
+#                                                       file_name=env_name, seed=0)
+# features_dim = len(trajectory_set[0].features)
+
+# query_optimizer = aprel.QueryOptimizerDiscreteTrajectorySet(trajectory_set)
+
+# true_user = aprel.HumanUser(delay=0.5)
+
+# # params = {'weights': aprel.util_funs.get_random_normalized_vector(features_dim)}
+# params = {'weights': [-1.0, -1.0, -1.0]}
+# user_model = aprel.SoftmaxUser(params)
+# belief = aprel.SamplingBasedBelief(user_model, [], params)
+# print('Estimated user parameters: ' + str(belief.mean))
+                                       
+# query = aprel.WeakComparisonQuery(trajectory_set[:2])
+
+# for query_no in range(10):
+#     queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=2)
+#     print('Objective Value: ' + str(objective_values[0]))
+    
+#     responses = true_user.respond(queries[0])
+#     belief.update(aprel.Preference(queries[0], responses[0]))
+#     print('Estimated user parameters: ' + str(belief.mean))
+
+# # Qlearning
+# env.reward_weights = belief.mean['weights']
+
+# epochs = 1000
+# Q = env.Q.copy()
+# for i in range(epochs):
+#     env.run()
+#     # Test for convergence on Q table values
+#     if i % 100 == 0:
+#         print("Epoch {}".format(i))
+#         print("Q table: {}".format(env.Q))
+#         print("Q table diff: {}".format({k: env.Q[k] - Q[k] for k in env.Q.keys() & Q.keys()}))
+#         print("Best path: {}".format(env.get_best_path()))
+#         Q = env.Q.copy()
+#     env.reset()
+
+# # Get the path
+# path = env.get_best_path()
+
+# breakpoint()
+
 class Ramping:
 
     def __init__(self, control_points, truncate_front=0, truncate_back=0):
@@ -28,7 +87,6 @@ class Ramping:
         if mode == 'cubic':
             # Do global curve interpolation
             self.ramp = fitting.interpolate_curve(self.control_points, 3, centripetal=True)
-            breakpoint()
             
     # def truncate(self):
     #     # truncate the ramp at the start and end given truncate_front and truncate_back (in percent)
@@ -74,72 +132,36 @@ class Ramping:
         # self.path = [point for point in self.path if point[0] > self.truncate_front and point[0] < self.truncate_back]
 
 
-        # Truncate the front and back of the path
+        # # Truncate the front and back of the path
         # self.path = self.path[round(self.truncate_front * len(self.path)):len(self.path) - round(self.truncate_back * len(self.path))]
-
+        #         self.path = [self.lab_to_rgb(p).to_string(hex=True) for p in self.path]
         self.path = [self.lab_to_rgb(p).to_string(hex=True) for p in self.path]
 
         # convert to ListedColormap
-        self.cmap = ListedColormap(path)
+        self.cmap = ListedColormap(self.path)
 
     def distance(self, p1, p2):
         return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')
 
-
-# Test the Ramping class using points from planning.py
-if __name__ == '__main__':
-    from planning import Planning
-    from ramping import Ramping
-
-    # [69.2, -7.569, -24.114]
-    # Test the Cieran class
-    # waypoints = [[26.6128, 37.85, -44.51], [90, -20, -13]]
-    # waypoints = [[26.6128, 37.85, -44.51]]
-    # obstacles = [[76, -9, -20]]
-    waypoints = [[26.6128, 37.85, -44.51], [69.2, -7.569, -24.114]]
-    obstacles = []
-
-    planner = Planning(waypoints, obstacles, 20, 1000, 0)
-    path = planner.get_path()
-    ramper = Ramping(path, truncate_front=0, truncate_back=0)
-    
+if __name__=="__main__":
+    path = [(72.45506299680495, 19.451625626588225, -14.244807378939939), (61.419906746804955, 20.967400660881793, -22.32320737893994), (54.876937996804955, 21.550391058686984, -26.076807378939947), (46.057357918679955, 23.985995387295446, -33.355527378939954), (37.909164559304955, 32.588342590465686, -32.49056737893994), (27.118148934304955, 36.90247153422425, -40.568967378939945)]
+    ramper = Ramping(path)
     ramper.execute()
 
-    # Plot the interpolated curve in matplotlib 3D
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
+    # Visualize the cmap using matplotlib using a simple colorbar
+    fig, ax = mpl.pyplot.subplots(figsize=(6, 1))
+    fig.subplots_adjust(bottom=0.5)
 
-    fig = plt.figure()
+    cmap = ramper.cmap
+    norm = mpl.colors.Normalize(vmin=0, vmax=1)
 
-    ax = fig.add_subplot(111, projection='3d')
+    cb1 = mpl.colorbar.ColorbarBase(ax, cmap=cmap,
 
-    # obstacles in red
-    if len(planner.obstacles) > 0:
-        ax.scatter(*zip(*planner.obstacles), c='r')
+                                    norm=norm,
 
-    # # path in blue
-    # ax.plot(*zip(*planner.path), c='b')
+                                    orientation='horizontal')
 
-    # get indices of waypoints in samples
-    waypoint_indices = [np.where((planner.samples == waypoint).all(axis=1))[0][0] for waypoint in planner.path]
+    mpl.pyplot.show()
 
-    # mask samples to only include samples that are not waypoints
-    samples = planner.samples[~np.isin(np.arange(len(planner.samples)), waypoint_indices)]
 
-    # samples in gray
-    ax.scatter(*zip(*samples), c='gray')
 
-    # waypoints in blue
-    ax.scatter(*zip(*planner.path), c='b')
-
-    breakpoint()
-
-    # path in green
-    ax.plot(*zip(*ramper.path), c='g')
-
-    # Label the axes
-    ax.set_xlabel('L*')
-    ax.set_ylabel('a*')
-    ax.set_zlabel('b*')
-    
-    plt.show()
