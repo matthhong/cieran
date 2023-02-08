@@ -16,54 +16,54 @@ from coloraide import Color
 import numpy as np
     
 
-# env = aprel.Environment([26.6128, 37.85, -44.51])
-# env_name = 'Cieran'
+def main():
+    env = aprel.Environment([69.33, -10.77, -24.79])
+    env_name = 'Cieran'
 
-# trajectory_set = aprel.generate_trajectories_randomly(env, num_trajectories=100,
-#                                                       max_episode_length=300,
-#                                                       file_name=env_name, seed=0)
-# features_dim = len(trajectory_set[0].features)
+    trajectory_set = aprel.generate_trajectories_randomly(env, num_trajectories=100,
+                                                        max_episode_length=300,
+                                                        file_name=env_name, seed=0)
+    features_dim = len(trajectory_set[0].features)
 
-# query_optimizer = aprel.QueryOptimizerDiscreteTrajectorySet(trajectory_set)
+    query_optimizer = aprel.QueryOptimizerDiscreteTrajectorySet(trajectory_set)
 
-# true_user = aprel.HumanUser(delay=0.5)
+    true_user = aprel.HumanUser(delay=0.5)
 
-# # params = {'weights': aprel.util_funs.get_random_normalized_vector(features_dim)}
-# params = {'weights': [-1.0, -1.0, -1.0]}
-# user_model = aprel.SoftmaxUser(params)
-# belief = aprel.SamplingBasedBelief(user_model, [], params)
-# print('Estimated user parameters: ' + str(belief.mean))
-                                       
-# query = aprel.WeakComparisonQuery(trajectory_set[:2])
+    # params = {'weights': aprel.util_funs.get_random_normalized_vector(features_dim)}
+    params = {'weights': [-1.0, -1.0, -1.0]}
+    user_model = aprel.SoftmaxUser(params)
+    belief = aprel.SamplingBasedBelief(user_model, [], params)
+    print('Estimated user parameters: ' + str(belief.mean))
+                                        
+    query = aprel.WeakComparisonQuery(trajectory_set[:2])
 
-# for query_no in range(10):
-#     queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=2)
-#     print('Objective Value: ' + str(objective_values[0]))
-    
-#     responses = true_user.respond(queries[0])
-#     belief.update(aprel.Preference(queries[0], responses[0]))
-#     print('Estimated user parameters: ' + str(belief.mean))
+    for query_no in range(10):
+        queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=2)
+        print('Objective Value: ' + str(objective_values[0]))
+        
+        responses = true_user.respond(queries[0])
+        belief.update(aprel.Preference(queries[0], responses[0]))
+        print('Estimated user parameters: ' + str(belief.mean))
 
-# # Qlearning
-# env.reward_weights = belief.mean['weights']
+    # Qlearning
+    env.reward_weights = belief.mean['weights']
 
-# epochs = 1000
-# Q = env.Q.copy()
-# for i in range(epochs):
-#     env.run()
-#     # Test for convergence on Q table values
-#     if i % 100 == 0:
-#         print("Epoch {}".format(i))
-#         print("Q table: {}".format(env.Q))
-#         print("Q table diff: {}".format({k: env.Q[k] - Q[k] for k in env.Q.keys() & Q.keys()}))
-#         print("Best path: {}".format(env.get_best_path()))
-#         Q = env.Q.copy()
-#     env.reset()
+    epochs = 1000
+    Q = env.Q.copy()
+    for i in range(epochs):
+        env.run()
+        # Test for convergence on Q table values
+        if i % 100 == 0:
+            print("Epoch {}".format(i))
+            # print("Q table: {}".format(env.Q))
+            # print("Q table diff: {}".format({k: env.Q[k] - Q[k] for k in env.Q.keys() & Q.keys()}))
+            # print("Best path: {}".format(env.get_best_path()))
+            Q = env.Q.copy()
+        env.reset()
 
-# # Get the path
-# path = env.get_best_path()
+    # Get the path
+    return env.get_best_path()
 
-# breakpoint()
 
 class Ramping:
 
@@ -86,7 +86,10 @@ class Ramping:
 
         if mode == 'cubic':
             # Do global curve interpolation
-            self.ramp = fitting.interpolate_curve(self.control_points, 3, centripetal=True)
+            try:
+                self.ramp = fitting.interpolate_curve(self.control_points, 3, centripetal=True)
+            except:
+                self.ramp = fitting.interpolate_curve(self.control_points, 2, centripetal=True)
             
     # def truncate(self):
     #     # truncate the ramp at the start and end given truncate_front and truncate_back (in percent)
@@ -143,9 +146,11 @@ class Ramping:
     def distance(self, p1, p2):
         return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')
 
+
 if __name__=="__main__":
-    path = [(72.45506299680495, 19.451625626588225, -14.244807378939939), (61.419906746804955, 20.967400660881793, -22.32320737893994), (54.876937996804955, 21.550391058686984, -26.076807378939947), (46.057357918679955, 23.985995387295446, -33.355527378939954), (37.909164559304955, 32.588342590465686, -32.49056737893994), (27.118148934304955, 36.90247153422425, -40.568967378939945)]
-    ramper = Ramping(path)
+    path = main()
+    # [(72.45506299680495, 19.451625626588225, -14.244807378939939), (61.419906746804955, 20.967400660881793, -22.32320737893994), (54.876937996804955, 21.550391058686984, -26.076807378939947), (46.057357918679955, 23.985995387295446, -33.355527378939954), (37.909164559304955, 32.588342590465686, -32.49056737893994), (27.118148934304955, 36.90247153422425, -40.568967378939945)]
+    ramper = Ramping(path[1:-1])
     ramper.execute()
 
     # Visualize the cmap using matplotlib using a simple colorbar
