@@ -319,22 +319,26 @@ class WeakComparisonQuery(Query):
         if self.chart is None:
             ramp1 = Ramping(self.slate[0].trajectory)
             ramp2 = Ramping(self.slate[1].trajectory)
-            ramp1.execute()
-            ramp2.execute()
+            try:
+                ramp1.execute()
+                ramp2.execute()
+            except:
+                breakpoint()
 
             # Show the ramps side by side
             fig, ax = plt.subplots(1, 2, figsize=(10, 5))
             im1=ax[0].imshow(data2d, cmap=ramp1.cmap)
             im2=ax[1].imshow(data2d, cmap=ramp2.cmap)
             # Show colorbars for both charts
-            fig.colorbar(im1, ax=ax[0])
-            fig.colorbar(im2, ax=ax[0])
+            # fig.colorbar(im1, ax=ax[0])
+            # fig.colorbar(im2, ax=ax[0])
 
             plt.show()
 
         selection = None
         while selection is None:
-            selection = input('Which trajectory is the best? Enter a number (-1 for "About Equal"): ')
+            selection = input('Which trajectory is the best? Enter a number (0 for "About Equal"): ')
+            selection = str(int(selection) - 1)
             if not isinteger(selection) or int(selection) not in self.response_set:
                 selection = None
         return int(selection)

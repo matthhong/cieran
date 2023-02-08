@@ -89,6 +89,8 @@ def generate_trajectories_randomly(env: Environment,
             #     if env_has_rgb_render:
             #         frames.append(np.uint8(env.render(mode='rgb_array')))
             traj = env.random_walk()
+            if len(traj) < 6:
+                continue
             # traj.append((obs, None))
             # if env_has_rgb_render:
             #     clip = ImageSequenceClip(frames, fps=30)
