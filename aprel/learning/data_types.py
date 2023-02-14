@@ -317,18 +317,13 @@ class WeakComparisonQuery(Query):
         #     time.sleep(delay)
         #     self.slate[i].visualize()
         if self.chart is None:
-            ramp1 = Ramping(self.slate[0].trajectory)
-            ramp2 = Ramping(self.slate[1].trajectory)
-            try:
-                ramp1.execute()
-                ramp2.execute()
-            except:
-                breakpoint()
+            ramp1 = self.slate[0].ramp
+            ramp2 = self.slate[1].ramp
 
             # Show the ramps side by side
             fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-            im1=ax[0].imshow(data2d, cmap=ramp1.cmap)
-            im2=ax[1].imshow(data2d, cmap=ramp2.cmap)
+            im1=ax[0].imshow(data2d, cmap=ramp1)
+            im2=ax[1].imshow(data2d, cmap=ramp2)
             # Show colorbars for both charts
             # fig.colorbar(im1, ax=ax[0])
             # fig.colorbar(im2, ax=ax[0])

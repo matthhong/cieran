@@ -17,181 +17,9 @@ END = np.array([0, 0, 0])
 # import numpy as np
 # from moviepy.editor import VideoFileClip
 # import networkx as nx
-from geomdl import fitting, operations
+from geomdl import fitting
+from geomdl.operations import tangent
 from coloraide import Color
-
-"""Modules that are related to environment trajectories."""
-
-class Trajectory:
-    """
-    A class for keeping trajectories that consist of a sequence of state-action pairs,
-    the features and a clip path that keeps a video visualization of the trajectory.
-    
-    This class supports indexing, such that t^th index returns the state-action pair at time
-    step t. However, indices cannot be assigned, i.e., a specific state-action pair cannot be
-    changed, because that would enable infeasible trajectories.
-    
-    Parameters:
-        env (Environment): The environment object that generated this trajectory.
-        trajectory (List[Tuple[numpy.array, numpy.array]]): The sequence of state-action pairs.
-        clip_path (str): The path to the video clip that keeps the visualization of the trajectory.
-    
-    Attributes:
-        trajectory (List[Tuple[numpy.array, numpy.array]]): The sequence of state-action pairs.
-        features (numpy.array): Features of the trajectory.
-        clip_path (str): The path to the video clip that keeps the visualization of the trajectory.
-    """
-    def __init__(self, trajectory: List[np.array], clip_path: str = None):
-        # Remove first and last points of trajectory
-        self.trajectory = trajectory[1:-1]
-        self.curve = None
-        self.clip_path = clip_path
-        self._features = None
-
-    def __getitem__(self, t: int) -> Tuple[np.array, np.array]:
-        """Returns the state-action pair at time step t of the trajectory."""
-        return self.trajectory[t]
-        
-    @property
-    def length(self) -> int:
-        """The length of the trajectory, i.e., the number of time steps in the trajectory."""
-        return len(self.trajectory)
-        
-    def visualize(self):
-        """
-        Visualizes the trajectory with a video if the clip exists. Otherwise, prints the trajectory information.
-        
-        :Note: FPS is fixed at 25 for video visualizations.
-        """
-        if self.clip_path is not None:
-            # clip = VideoFileClip(self.clip_path)
-            # clip.preview(fps=30)
-            # clip.close()
-            pass
-        else:
-            print('Headless mode is on. Printing the trajectory information.')
-            #print(self.trajectory)
-            print('Features for this trajectory are: ' + str(self.features))
-
-    def interpolate(self):
-        # Interpolate the ramp
-        self.curve = fitting.interpolate_curve(self.control_points, 3, centripetal=True)
-
-    def ramp(self):
-        t = np.linspace(0, 1, 1000)
-        at = np.linspace(0, 1, 1000)
-        points = self.curve.evaluate_list(at)
-
-        # Get the arc length of the ramp at each point using distance function
-        arc_lengths = [0]
-        for i in range(1, len(points)):
-            arc_lengths.append(arc_lengths[i-1] + self.distance(points[i-1], points[i]))
-
-        # Normalize the arc lengths
-        arc_lengths = np.array(arc_lengths) / arc_lengths[-1]
-
-        # Invert the arc lengths to get the parameterization
-        at_t = np.interp(at, arc_lengths, t)
-
-        # Get the points from the ramp using the parameterization
-        self.ramp = self.curve.evaluate_list(at_t)
-
-    def distance(self, p1, p2):
-        return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')
-
-    @property
-    def features(self):
-        if self._features is None:
-            self.interpolate()
-            self._features = []
-            self._features.extend(self.a_range())
-            self._features.extend(self.b_range())
-            self._features.append(self.max_curvature())
-            self._features = np.array(self._features)
-        return self._features
-
-    def arc_length(self, path: List[np.array], env) -> float:
-        # Get the edge weights of the path, where an edge is an array of two nodes
-        # edge_weights = [env.graph.get_edge_data(tuple(path[i]), tuple(path[i+1]))['weight'] for i in range(len(path) - 1)]
-        # return sum(edge_weights) / env.longest_path_length
-        pass
-
-    def a_range(self) -> float:
-        #min is either 0 or the actual min
-        min = 0
-        if min([point[1] for point in self.curve]) < 0:
-            min = min([point[1] for point in self.curve])
-        return [abs(min/255)/128, max([point[1] for point in self.curve])/127]
-
-    def b_range(self) -> float:
-        min = 0
-        if min([point[2] for point in self.curve]) < 0:
-            min = min([point[2] for point in self.curve])
-        return [abs(min/255)/128, max([point[2] for point in self.curve])/127]
-
-    def max_curvature(self) -> float:
-        # Tangent vectors
-        curvetan = []
-        delta = 0.01
-
-        # For each delta
-        for u in np.arange(0, 1, delta):
-            curvetan.append(operations.tangent(self.curve, u, normalize=True))
-        
-        # Get the derivative of the tangent vectors
-        curvetan = np.array(curvetan)
-        curvetan = np.diff(curvetan, axis=0)
-
-        # Get the magnitude of the derivative
-        curvetan = np.linalg.norm(curvetan, axis=1)
-
-        curvatures = curvetan / (delta ** 2)
-
-        return max(curvatures)
-
-
-
-
-class TrajectorySet:
-    """
-    A class for keeping a set of trajectories, i.e. :class:`.Trajectory` objects.
-    
-    This class supports indexing, such that t^th index returns the t^th trajectory in the set.
-    Similarly, t^th trajectory in the set can be replaced with a new trajectory using indexing.
-    Only for reading trajectories with indexing, list indices are also allowed.
-    
-    Parameters:
-        trajectories (List[Trajectory]): The list of trajectories to be stored in the set.
-    
-    Attributes:
-        trajectories (List[Trajectory]): The list of trajectories in the set.
-        features_matrix (numpy.array): n x d array of features where each row consists of the d features
-            of the corresponding trajectory.
-    """
-    def __init__(self, trajectories: List[Trajectory]):
-        self.trajectories = trajectories
-        self.features_matrix = np.array([trajectory.features for trajectory in self.trajectories])
-
-    def __getitem__(self, idx: Union[int, List[int], np.array]):
-        if isinstance(idx, list) or type(idx).__module__ == np.__name__:
-            return TrajectorySet([self.trajectories[i] for i in idx])
-        return self.trajectories[idx]
-        
-    def __setitem__(self, idx: int, new_trajectory: Trajectory):
-        self.trajectories[idx] = new_trajectory
-
-    @property
-    def size(self) -> int:
-        """The number of trajectories in the set."""
-        return len(self.trajectories)
-        
-    def append(self, new_trajectory: Trajectory):
-        """Appends a new trajectory to the set."""
-        self.trajectories.append(new_trajectory)
-        if self.size == 1:
-            self.features_matrix = new_trajectory.features.reshape((1,-1))
-        else:
-            self.features_matrix = np.vstack((self.features_matrix, new_trajectory.features))
 
     
 
@@ -245,7 +73,35 @@ class GraphEnv:
         
         print("num ramps: " + str(len(self.fitted_ramps)))
         print("num out of gamut: " + str(num_out_of_gamut))
+
+        # Visualize the states in 3D LAB space
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        for ramp in self.fitted_ramps:
+            ramp = np.array(ramp)
+            ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
+
+        # Display all nodes as scatter plot, in gray
+        print("Number of nodes:", len(self.graph.nodes))
+
+        print("Number of original colors:" , len(self.fitted_ramps * 9))
+        for node in self.graph.nodes:
+            # if not in any ramp
+            if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
+                ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
         
+        # Label the axes
+        ax.set_xlabel('L')
+        ax.set_ylabel('A')
+        ax.set_zlabel('B')
+
+        plt.show()
+
+            
         # Add the ramp points to the graph, and edges between adjacent ramp points
         for i, ramp in enumerate(self.fitted_ramps):
             # Put start and end points into the ramp
@@ -257,10 +113,6 @@ class GraphEnv:
                     distance = 0
                 self.graph.add_edge(tuple(ramp[i]), tuple(ramp[i-1]), weight=distance)
 
-        # breakpoint()
-        # print(max_angular_velocity(nx.dag_longest_path(self.graph)))
-        # self.longest_path_length = nx.dag_longest_path_length(self.graph)
-        self.longest_trajectory = Trajectory(nx.dag_longest_path(self.graph))
     
 
     def load_centroids(self):
@@ -355,7 +207,7 @@ class GraphEnv:
 
 class QLearning(GraphEnv):
 
-    def __init__(self, color, source, target, weight='weight', epsilon=0.1):
+    def __init__(self, color, source, target, weight='weight', epsilon=0.1, feature_func=None):
         super().__init__(color)
 
         self.state_actions = {}
@@ -418,14 +270,9 @@ class QLearning(GraphEnv):
     def utility(self, state):
         if self.terminal(state):
             # Dot product of reward weights and feature vector
-            return np.dot(self.reward_weights, self.feature_vec)
+            return np.dot(self.reward_weights, self.feature_func(self.trajectory[1:-1]))
         else:
             return self.max_Q(state)[0]
-
-    @property
-    def feature_vec(self):
-        trajectory = Trajectory(self.trajectory[1:-1])
-        return trajectory.features
 
     def max_Q(self, state):
         # Find the maximum value in Q for a given (node, neighbor)
@@ -468,11 +315,12 @@ class QLearning(GraphEnv):
 
 class Environment(QLearning):
 
-    def __init__(self, color, source=tuple(START), target=tuple(END), weight='weight', epsilon=0.1, lambd=0.9):
-        super().__init__(color, source, target, weight, epsilon)
+    def __init__(self, color, source=tuple(START), target=tuple(END), weight='weight', epsilon=0.1, lambd=0.9, feature_func=None):
+        super().__init__(color, source, target, weight, epsilon, feature_func=feature_func)
         self.decay = lambd
         self.render_exists = False
         self.close_exists = False
+        self.feature_func = feature_func
 
     def run(self):
         eligibility = {}
