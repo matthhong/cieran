@@ -8,7 +8,9 @@ import networkx as nx
 from geomdl import fitting, operations
 from coloraide import Color
 
+from matplotlib.colors import ListedColormap
 
+"""Modules that are related to environment trajectories."""
 
 class Trajectory:
     """
@@ -34,6 +36,9 @@ class Trajectory:
         self.trajectory = trajectory[1:-1]
         self.curve = None
         self.clip_path = clip_path
+        self._ramp = None
+        self.env = env
+        self.features = env.feature_func(trajectory)
 
     def __getitem__(self, t: int) -> Tuple[np.array, np.array]:
         """Returns the state-action pair at time step t of the trajectory."""
@@ -62,73 +67,45 @@ class Trajectory:
 
     def interpolate(self):
         # Interpolate the ramp
-        self.curve = fitting.interpolate_curve(self.control_points, 3, centripetal=True)
+        try:
+            self.curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
+        except:
+            self.curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
 
+    @property
     def ramp(self):
-        t = np.linspace(0, 1, 1000)
-        at = np.linspace(0, 1, 1000)
-        points = self.curve.evaluate_list(at)
+        if self._ramp is None:
+            self.interpolate()
+            t = np.linspace(0, 1, 1000)
+            at = np.linspace(0, 1, 1000)
+            points = self.curve.evaluate_list(at)
 
-        # Get the arc length of the ramp at each point using distance function
-        arc_lengths = [0]
-        for i in range(1, len(points)):
-            arc_lengths.append(arc_lengths[i-1] + self.distance(points[i-1], points[i]))
+            # Get the arc length of the ramp at each point using distance function
+            arc_lengths = [0]
+            for i in range(1, len(points)):
+                arc_lengths.append(arc_lengths[i-1] + self.distance(points[i-1], points[i]))
 
-        # Normalize the arc lengths
-        arc_lengths = np.array(arc_lengths) / arc_lengths[-1]
+            # Normalize the arc lengths
+            arc_lengths = np.array(arc_lengths) / arc_lengths[-1]
 
-        # Invert the arc lengths to get the parameterization
-        at_t = np.interp(at, arc_lengths, t)
+            # Invert the arc lengths to get the parameterization
+            at_t = np.interp(at, arc_lengths, t)
 
-        # Get the points from the ramp using the parameterization
-        self.ramp = self.curve.evaluate_list(at_t)
+            # Get the points from the ramp using the parameterization
+            points = self.curve.evaluate_list(at_t)
+            colors = [self.lab_to_rgb(p).to_string(hex=True) for p in points]
+
+            # convert to ListedColormap
+            self._ramp = ListedColormap(colors)
+
+        return self._ramp
+
+    def lab_to_rgb(self, lab):
+        # Convert a CIELAB value to an RGB value
+        return Color("lab({}% {} {} / 1)".format(*lab)).convert("srgb")
 
     def distance(self, p1, p2):
         return Color("lab({}% {} {} / 1)".format(*p1)).delta_e(Color("lab({}% {} {} / 1)".format(*p2)), method='2000')
-
-    @property
-    def features(self):
-        if len(self._features) == 0:
-            self.interpolate()
-            self._features = []
-            self._features.append(self.a_range())
-            self._features.append(self.b_range())
-            self._features.append(self.max_curvature())
-            self._features = np.array(self._features)
-        return self._features
-
-    def arc_length(self, path: List[np.array], env) -> float:
-        # Get the edge weights of the path, where an edge is an array of two nodes
-        # edge_weights = [env.graph.get_edge_data(tuple(path[i]), tuple(path[i+1]))['weight'] for i in range(len(path) - 1)]
-        # return sum(edge_weights) / env.longest_path_length
-        pass
-
-    def a_range(self) -> float:
-        return (max([point[1] for point in self.curve]) - min([point[1] for point in self.curve])) / 255
-
-    def b_range(self) -> float:
-        return (max([point[2] for point in self.curve]) - min([point[2] for point in self.curve])) / 255
-
-    def max_curvature(self) -> float:
-        # Tangent vectors
-        curvetan = []
-        delta = 0.01
-
-        # For each delta
-        for u in np.arange(0, 1, delta):
-            curvetan.append(operations.tangent(self.curve, u, normalize=True))
-        
-        # Get the derivative of the tangent vectors
-        curvetan = np.array(curvetan)
-        curvetan = np.diff(curvetan, axis=0)
-
-        # Get the magnitude of the derivative
-        curvetan = np.linalg.norm(curvetan, axis=1)
-
-        curvatures = curvetan / (delta ** 2)
-
-        return max(curvatures)
-
 
 
 
