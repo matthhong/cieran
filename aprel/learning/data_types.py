@@ -18,7 +18,8 @@ from matplotlib.colors import ListedColormap
 from geomdl import fitting
 
 from coloraide import Color
-from IPython.display import clear_output
+from IPython.display import display, clear_output
+import ipywidgets as widgets
     
 
 t = np.linspace(0, 2 * np.pi, 1024)
@@ -317,9 +318,10 @@ class WeakComparisonQuery(Query):
         #     print('Playing trajectory #' + str(i))
         #     time.sleep(delay)
         #     self.slate[i].visualize()
+        ramp1 = self.slate[0].ramp
+        ramp2 = self.slate[1].ramp
+        out = widgets.Output()
         if self.chart is None:
-            ramp1 = self.slate[0].ramp
-            ramp2 = self.slate[1].ramp
 
             # Show the ramps side by side
             fig, ax = plt.subplots(1, 2, figsize=(10, 5))
@@ -330,6 +332,29 @@ class WeakComparisonQuery(Query):
             # fig.colorbar(im2, ax=ax[0])
 
             plt.show()
+        else:
+            # define two functions that return plots
+            # create widgets for each plot while passing a cmap argument to the Output widget
+            plot_widget1 = widgets.Output()
+            plot_widget2 = widgets.Output()
+
+            # call the plot functions to display the plots
+            with plot_widget1:
+                self.chart(ramp1)
+
+            with plot_widget2:
+                self.chart(ramp2)
+
+            # create an HBox layout widget to display the plots side by side, while justify_content is set to 'space-between' to evenly space the plots
+            box_layout = widgets.Layout(display='flex',
+                            flex_flow='row',
+                            justify_content='space-around')
+            plots_hbox = widgets.HBox([plot_widget1, plot_widget2], layout=box_layout)
+
+            display(out)
+            with out:
+                # display the HBox widget
+                display(plots_hbox)
 
         selection = None
         while selection is None:
@@ -337,7 +362,7 @@ class WeakComparisonQuery(Query):
             selection = str(int(selection) - 1)
             if not isinteger(selection) or int(selection) not in self.response_set:
                 selection = None
-        clear_output(wait=True)
+        clear_output()
         return int(selection)
 
 

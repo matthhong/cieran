@@ -9,7 +9,7 @@ import matplotlib as mpl
 
 
 from matplotlib.colors import ListedColormap
-
+import matplotlib.pyplot as plt
 from geomdl import fitting
 
 from coloraide import Color
@@ -91,6 +91,7 @@ def chroma(trajectory):
     return [c/150 for c in chroma]
 
 def max_derivatives(trajectory):
+    # FIX: This is not working, only capturing the a* values
 
     slopes = []
     for i in range(len(trajectory) - 1):
@@ -128,6 +129,21 @@ def feature_func(trajectory):
     c_list = chroma(trajectory)
 
     return np.array([derivs[0], derivs[1], a_list[0], a_list[1], b_list[0], b_list[1], np.mean(c_list), max(c_list)])
+
+
+t = np.linspace(0, 2 * np.pi, 1024)
+data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
+
+def draw_chart(cmap):
+
+    # Draw a chart of data2d with the given colormap
+    fig, ax = plt.subplots()
+    ax.imshow(data2d, cmap=cmap)
+    # ax.set_title(cmap.name)
+    # ax.set_axis_off()
+    # fig.tight_layout()
+
+    plt.show()
     
 
 def main():
@@ -160,7 +176,7 @@ def main():
     belief = aprel.SamplingBasedBelief(user_model, [], params)
     print('Estimated user parameters: ' + str(belief.mean))
                                         
-    query = aprel.WeakComparisonQuery(trajectory_set[:2])
+    query = aprel.WeakComparisonQuery(trajectory_set[:2], chart=draw_chart)
 
     for query_no in range(10):
         queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
