@@ -18,6 +18,7 @@ from matplotlib.colors import ListedColormap
 from geomdl import fitting
 
 from coloraide import Color
+from IPython.display import clear_output
     
 
 t = np.linspace(0, 2 * np.pi, 1024)
@@ -336,6 +337,7 @@ class WeakComparisonQuery(Query):
             selection = str(int(selection) - 1)
             if not isinteger(selection) or int(selection) not in self.response_set:
                 selection = None
+        clear_output(wait=True)
         return int(selection)
 
 

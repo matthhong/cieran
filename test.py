@@ -94,7 +94,7 @@ def max_derivatives(trajectory):
 
     slopes = []
     for i in range(len(trajectory) - 1):
-        slopes.append((trajectory[i+1][1] - trajectory[i][1]) / (trajectory[i+1][0] - trajectory[i][0]))
+        slopes.append(abs((trajectory[i+1][1] - trajectory[i][1]) / (trajectory[i+1][0] - trajectory[i][0])))
 
     max_slope = 0
     try:

@@ -286,7 +286,8 @@ class QLearning(GraphEnv):
         return max_q, max_neighbor
 
     def choose_action(self, state):
-        self.next_state = self.greedy_epsilon(state)
+        # self.next_state = self.greedy_epsilon(state)
+        self.next_state = self.softmax(state)
         self.trajectory.append(self.next_state)
 
     def choose_random_action(self, state):
@@ -302,6 +303,13 @@ class QLearning(GraphEnv):
         max_neighbor = self.max_Q(state)[1]
         
         return max_neighbor
+
+    def softmax(self, state):
+        # Choose a neighbor with a probability proportional to its Q value
+        neighbors = self.state_actions[state]
+        q_values = [self.Q.get((state, neighbor), 0) for neighbor in neighbors]
+        probs = [np.exp(q) / sum(np.exp(q_values)) for q in q_values]
+        return random.choices(neighbors, weights=probs)[0]
 
     def get_best_path(self):
         # Get path that maximizes Q at each step

@@ -28,7 +28,7 @@ class Ramping:
         if mode == 'cubic':
             # Do global curve interpolation
             self.ramp = fitting.interpolate_curve(self.control_points, 3, centripetal=True)
-            breakpoint()
+            # breakpoint()
             
     # def truncate(self):
     #     # truncate the ramp at the start and end given truncate_front and truncate_back (in percent)
@@ -131,8 +131,6 @@ if __name__ == '__main__':
 
     # waypoints in blue
     ax.scatter(*zip(*planner.path), c='b')
-
-    breakpoint()
 
     # path in green
     ax.plot(*zip(*ramper.path), c='g')

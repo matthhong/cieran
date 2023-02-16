@@ -136,7 +136,7 @@ class Planning:
 
             # Run A* to find the shortest path between start and end
             path += astar_path(self.graph, tuple(start), tuple(end), weight='weight')[1:]
-        breakpoint()
+        # breakpoint()
         return path
 
 
