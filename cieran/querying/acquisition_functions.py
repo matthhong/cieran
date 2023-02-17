@@ -7,7 +7,7 @@ import numpy as np
 
 from cieran.basics import Trajectory
 from cieran.learning import Belief, SamplingBasedBelief
-from cieran.learning import Query, PreferenceQuery, WeakComparisonQuery, FullRankingQuery
+from cieran.learning import Query, WeakComparisonQuery
 
 def mutual_information(belief: Belief, query: Query, **kwargs) -> float:
     """

@@ -10,12 +10,26 @@ from cieran.querying.query_optimizer import QueryOptimizerDiscreteTrajectorySet
 
 from cieran.utils.generate_trajectories import generate_trajectories_randomly
 
+import pickle
+
 
 def train(color, render=None):
     # Need to be able to capture hexcode, lab, rgb, or cmyk
 
-    # Need this to be able to load data from a pickle
-    env = Environment(color, feature_func=feature_func)
+    # TODO: Maybe we can just precompute the trajectories and save them to a file by using some gray color as a
+
+    # Save environment as a pickle file
+    import pickle
+
+    env_name = 'Cieran'
+
+    with open(env_name + '.pkl', 'rb') as f:
+        env = pickle.load(f)
+    
+    # env = Environment(color, feature_func=feature_func)
+
+    # with open(env_name + '.pkl', 'wb') as f:
+    #     pickle.dump(env, f)
 
     # Generate trajectories here as opposed to the above
     trajectory_set = generate_trajectories_randomly(env, num_trajectories=100, max_episode_length=300, file_name='Cieran', seed=0)

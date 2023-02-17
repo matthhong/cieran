@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import scipy.spatial.distance as ssd
 
-from cieran.learning import Query, PreferenceQuery, WeakComparisonQuery, FullRankingQuery
+from cieran.learning import Query, WeakComparisonQuery
 
 
 def default_query_distance(queries: List[Query], **kwargs) -> np.array:
@@ -20,10 +20,10 @@ def default_query_distance(queries: List[Query], **kwargs) -> np.array:
         numpy.array: an m-by-m numpy array that consists of the pairwise distances between the queries.
         
     Raises:
-        AssertionError: if the query is not a compatible type. Currently, the compatible types are: :class:`.FullRankingQuery`, :class:`.PreferenceQuery`, and :class:`.WeakComparisonQuery` (all for a slate size of 2).
+        AssertionError: if the query is not a compatible type. Cieran is only compatible with weak comparison queries.
     """
     kwargs.setdefault('metric', 'euclidean')
-    compatible_types = [isinstance(query, PreferenceQuery) or isinstance(query, WeakComparisonQuery) or isinstance(query, FullRankingQuery) for query in queries]
+    compatible_types = [isinstance(query, WeakComparisonQuery) for query in queries]
     assert np.all(compatible_types), 'Default query distance, which you are using for batch selection, does not support the given query types. Consider using a custom distance function. See utils/batch_utils.py.'
     assert np.all([query.K == 2 for query in queries]), 'Default query distance, which you are using for batch selection, does not support large slates, use K = 2. Or consider using a custom distance function. See utils/batch_utils.py.'
 

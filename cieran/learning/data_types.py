@@ -168,7 +168,7 @@ class WeakComparison(QueryWithResponse):
         AssertionError: if the response is not in the response set of the query.
     """
     def __init__(self, query: WeakComparisonQuery, response: int):
-        super(WeakComparison, self).__init__(query, response)
+        super(WeakComparison, self).__init__(query)
         assert(response in self.query.response_set), 'Invalid response ' + str(response) +  ' for the weak comparison query.'
         self.response = response
 

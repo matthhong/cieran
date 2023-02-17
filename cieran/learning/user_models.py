@@ -5,8 +5,8 @@ import scipy.special as ssp
 from copy import deepcopy
 
 from cieran.basics import Trajectory, TrajectorySet
-from cieran.learning import Query, PreferenceQuery, WeakComparisonQuery, FullRankingQuery
-from cieran.learning import QueryWithResponse, Demonstration, Preference, WeakComparison, FullRanking
+from cieran.learning import Query, WeakComparisonQuery
+from cieran.learning import QueryWithResponse, WeakComparison
 
 
 class User:
@@ -76,10 +76,10 @@ class User:
             float: The loglikelihood of :py:attr:`data` under the user.
         """
         logprobs = self.response_logprobabilities(data)
-        if isinstance(data, Preference) or isinstance(data, WeakComparison):
+        if isinstance(data, WeakComparison):
             idx = np.where(data.query.response_set == data.response)[0][0]
-        elif isinstance(data, FullRanking):
-            idx = np.where((data.query.response_set == data.response).all(axis=1))[0][0]
+        else:
+            raise(NotImplementedError, "Cieran only supports WeakComparison queries.")
         return logprobs[idx]
 
     def likelihood(self, data: QueryWithResponse) -> float:
@@ -170,11 +170,8 @@ class SoftmaxUser(User):
         
     def response_logprobabilities(self, query: Query) -> np.array:
         """Overwrites the parent's method. See :class:`.User` for more information."""
-        if isinstance(query, PreferenceQuery):
-            rewards = self.params['beta'] * self.reward(query.slate)
-            return rewards - ssp.logsumexp(rewards)
             
-        elif isinstance(query, WeakComparisonQuery):
+        if isinstance(query, WeakComparisonQuery):
             rewards = self.params['beta'] * self.reward(query.slate)
             logprobs = np.zeros((3))
             logprobs[1] = -np.log(1 + np.exp(self.params['delta'] + rewards[1] - rewards[0]))
@@ -182,15 +179,7 @@ class SoftmaxUser(User):
             logprobs[0] = np.log(np.exp(2*self.params['delta']) - 1) + logprobs[1] + logprobs[2]
             return logprobs
             
-        elif isinstance(query, FullRankingQuery):
-            rewards = self.params['beta'] * self.reward(query.slate)
-            logprobs = np.zeros(len(query.response_set))
-            for response_id in range(len(query.response_set)):
-                response = query.response_set[response_id]
-                sorted_rewards = rewards[response]
-                logprobs[response_id] = np.sum([sorted_rewards[i] - ssp.logsumexp(sorted_rewards[i:]) for i in range(len(response))])
-            return logprobs
-        raise NotImplementedError("response_logprobabilities is not defined for demonstration queries.")
+        raise NotImplementedError("Cieran only supports WeakComparison queries.")
 
     def loglikelihood(self, data: QueryWithResponse) -> float:
         """
@@ -199,14 +188,7 @@ class SoftmaxUser(User):
         :Note: The loglikelihood value is the logarithm of the `unnormalized` likelihood if the
             input is a demonstration. Otherwise, it is the exact loglikelihood.
         """
-        if isinstance(data, Demonstration):
-            return self.params['beta_D'] * self.reward(data)
-        
-        elif isinstance(data, Preference):
-            rewards = self.params['beta'] * self.reward(data.query.slate)
-            return rewards[data.response] - ssp.logsumexp(rewards)
-            
-        elif isinstance(data, WeakComparison):
+        if isinstance(data, WeakComparison):
             rewards = self.params['beta'] * self.reward(data.query.slate)
             
             logp0 = -np.log(1 + np.exp(self.params['delta'] + rewards[1] - rewards[0]))
@@ -218,12 +200,7 @@ class SoftmaxUser(User):
             if data.response == -1:
                 return np.log(np.exp(2*self.params['delta']) - 1) + logp0 + logp1
                 
-        elif isinstance(data, FullRanking):
-            rewards = self.params['beta'] * self.reward(data.query.slate)
-            sorted_rewards = rewards[data.response]
-            return np.sum([sorted_rewards[i] - ssp.logsumexp(sorted_rewards[i:]) for i in range(len(data.response))])
-            
-        raise NotImplementedError("User response model for the given data is not implemented.")
+        raise NotImplementedError("Cieran only supports WeakComparison queries.")
 
     def reward(self, trajectories: Union[Trajectory, TrajectorySet]) -> Union[float, np.array]:
         """

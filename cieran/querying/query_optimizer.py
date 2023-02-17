@@ -9,7 +9,7 @@ import warnings
 
 from cieran.basics import Trajectory, TrajectorySet
 from cieran.learning import Belief, SamplingBasedBelief, User, SoftmaxUser
-from cieran.learning import Query, PreferenceQuery, WeakComparisonQuery, FullRankingQuery
+from cieran.learning import Query, WeakComparisonQuery
 from cieran.querying import mutual_information, volume_removal, disagreement, regret, random, thompson
 from cieran.utils import kMedoids, dpp_mode, default_query_distance
 
@@ -187,7 +187,7 @@ class QueryOptimizerDiscreteTrajectorySet(QueryOptimizer):
                     - List[Query]: The optimized batch of queries as a list.
                     - numpy.array: An array of floats that keep the acquisition function values corresponding to the output queries.
         """
-        if isinstance(initial_query, PreferenceQuery) or isinstance(initial_query, WeakComparisonQuery) or isinstance(initial_query, FullRankingQuery):
+        if isinstance(initial_query, WeakComparisonQuery):
             if acquisition_func is random:
                 best_batch = [initial_query.copy() for _ in range(batch_size)]
                 for i in range(batch_size):
