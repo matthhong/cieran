@@ -33,7 +33,7 @@ class Trajectory:
     """
     def __init__(self, env, trajectory: List[np.array], clip_path: str = None):
         # Remove first and last points of trajectory
-        self.trajectory = trajectory[1:-1]
+        self.trajectory = trajectory
         self.curve = None
         self.clip_path = clip_path
         self._ramp = None

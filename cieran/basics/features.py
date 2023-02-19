@@ -13,7 +13,8 @@ def max_accel(trajectory, accessor):
 
     slopes = []
     for i in range(len(trajectory) - 1):
-        slopes.append(abs((trajectory[i+1][1] - trajectory[i][1]) / (trajectory[i+1][0] - trajectory[i][0])))
+        slopes.append(abs(
+            (trajectory[i+1][1] - trajectory[i][1]) / (trajectory[i+1][0] - trajectory[i][0])))
 
     max_slope = 0
     try:
@@ -33,13 +34,31 @@ def max_accel(trajectory, accessor):
 
     return max_accel/127
 
+def mean_stdev_theta(trajectory):
+    # COnvert to polar coordinates
+    theta = []
+    for point in trajectory:
+        theta.append(np.arctan2(point[2], point[1]))
+
+    # Find the circular mean using arctan2
+    a = np.mean([np.cos(t) for t in theta])
+    b = np.mean([np.sin(t) for t in theta])
+    mean_theta = np.arctan2(b, a)
+
+    # Find the circular stdev using Yamartino method
+    epsilon = np.sqrt(1-a**2-b**2)
+    stdev_theta = np.arcsin(epsilon) * (1 + (((2 / np.sqrt(3) - 1)) * epsilon**3))
+    return mean_theta/np.pi, stdev_theta/np.pi
+
+
 def distance(trajectory):
     # Compute euclidean distance between points
-    return sum([np.sqrt((trajectory[i+1][0] - trajectory[i][0])**2 + (trajectory[i+1][1] - trajectory[i][1])**2 + (trajectory[i+1][2] - trajectory[i][2])**2) for i in range(len(trajectory) - 1)])
+    dist = sum([np.sqrt((trajectory[i+1][0] - trajectory[i][0])**2 + (trajectory[i+1][1] - trajectory[i][1])**2 + (trajectory[i+1][2] - trajectory[i][2])**2) for i in range(len(trajectory) - 1)])
+    return dist/414.48168477836606
 
 
 def min_max(trajectory, accessor):
-    #min is either 0 or the actual min
+    # min is either 0 or the actual min
     min_val = 0
     if min([accessor(point) for point in trajectory]) < 0:
         min_val = min([accessor(point) for point in trajectory])
@@ -50,10 +69,8 @@ def feature_func(trajectory):
     # a_accel = max_accel(trajectory, accessor=lambda point: point[1])
     # b_accel = max_accel(trajectory, accessor=lambda point: point[2])
     dist = distance(trajectory)
-    a_list = min_max(trajectory, accessor=lambda point: point[1])
-    b_list = min_max(trajectory, accessor=lambda point: point[2])
-    # max_c = max_chroma(trajectory)
-
-    return np.array([dist, a_list[0], a_list[1], b_list[0], b_list[1]])
-
-    
+    # a_list = min_max(trajectory, accessor=lambda point: point[1])
+    # b_list = min_max(trajectory, accessor=lambda point: point[2])
+    max_c = max_chroma(trajectory)
+    mean_theta, stdev_theta = mean_stdev_theta(trajectory)
+    return np.array([dist, max_c, mean_theta, stdev_theta])

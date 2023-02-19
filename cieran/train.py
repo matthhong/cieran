@@ -47,7 +47,7 @@ def visualize_path(ramp):
 
     plt.show()
 
-def train(color, render=None):
+def query(color, render=None):
     # Need to be able to capture hexcode, lab, rgb, or cmyk
 
     # TODO: Maybe we can just precompute the trajectories and save them to a file by using some gray color as a
@@ -84,7 +84,7 @@ def train(color, render=None):
                                         
     query = WeakComparisonQuery(trajectory_set[:2], chart=render)
 
-    for query_no in range(20):
+    for query_no in range(10):
         queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
 
         print('Objective Value: ' + str(objective_values[0]))
@@ -95,7 +95,10 @@ def train(color, render=None):
 
     env.reward_weights = belief.mean['weights']
 
-    epochs = 1000
+    return env
+
+def train(env):
+    epochs = 20000
     path_history = []
     reward_history = []
     print("Learning...")
@@ -104,7 +107,13 @@ def train(color, render=None):
 
         path = env.get_best_path()
         path_history.append(path)
-        reward_history.append(np.dot(env.reward_weights, env.feature_func(path[1:-1])))
+        reward_history.append(np.dot(env.reward_weights, env.feature_func(path)))
+
+        # if i > 0 and i % 500 == 0:
+        #     # Compare the reward of the current path to the reward of the path 499 epochs ago, and stop if they are the same
+        #     if reward_history[-1] == reward_history[-500]:
+        #         print("Converged at epoch " + str(i))
+        #         break
 
         env.reset()
 

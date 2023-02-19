@@ -38,7 +38,7 @@ class QLearning:
         self.epsilon = epsilon
         self.Q = {}
 
-        self.lr = 1
+        self.lr = 0.9
         self.discount = 1
 
         self.reset()
@@ -94,8 +94,8 @@ class QLearning:
         return max_q, max_neighbor
 
     def choose_action(self, state):
-        # self.next_state = self.greedy_epsilon(state)
-        self.next_state = self.softmax(state)
+        self.next_state = self.greedy_epsilon(state)
+        # self.next_state = self.softmax(state)
         self.trajectory.append(self.next_state)
 
     def greedy_epsilon(self, state):
@@ -105,7 +105,7 @@ class QLearning:
 
         # Choose the neighbor with the highest Q value
         max_neighbor = self.max_Q(state)[1]
-        breakpoint()
+        # breakpoint()
         
         return max_neighbor
     
@@ -183,7 +183,7 @@ if __name__=='__main__':
 
     # Learn
     epochs = 2000
-    env = QLambdaLearning(G, 0, 99)
+    env = QLearning(G, 0, 99)
     
     Q = env.Q.copy()
     reward_history = []

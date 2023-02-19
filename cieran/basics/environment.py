@@ -314,7 +314,7 @@ class GraphEnv:
         return translated_curve
 
 
-class QLearning(GraphEnv):
+class Environment(GraphEnv):
 
     def __init__(self, color, source, target, weight='weight', epsilon=0.1, feature_func=None):
         super().__init__(color)
@@ -329,9 +329,10 @@ class QLearning(GraphEnv):
         self.epsilon = epsilon
         self.Q = {}
 
-        self.lr = 1
-        self.discount = 1
+        self.lr = 0.1
+        self.discount = 0.9
         self.reward_weights = np.array([-1,-1,-1])
+        self.feature_func = feature_func
 
         self.reset()
 
@@ -368,7 +369,7 @@ class QLearning(GraphEnv):
         if len(self.trajectory) > 2:
             max_accel_a = self.max_accel(self.trajectory, 1)
             max_accel_b = self.max_accel(self.trajectory, 2)
-            return -max_accel_a - max_accel_b
+            return -0.5 * (max_accel_a + max_accel_b)
         return 0
 
     @property
@@ -398,7 +399,7 @@ class QLearning(GraphEnv):
                 max_neighbor = neighbor
         return max_q, max_neighbor
     
-    def max_accel(trajectory, accessor):
+    def max_accel(self, trajectory, accessor):
 
         slopes = []
         for i in range(len(trajectory) - 1):
@@ -452,28 +453,28 @@ class QLearning(GraphEnv):
         return path
 
 
-class Environment(QLearning):
+# class Environment(QLearning):
 
-    def __init__(self, color, source=tuple(START), target=tuple(END), weight='weight', epsilon=0.1, lambd=0.9, feature_func=None):
-        super().__init__(color, source, target, weight, epsilon, feature_func=feature_func)
-        self.decay = lambd
-        self.render_exists = False
-        self.close_exists = False
-        self.feature_func = feature_func
+#     def __init__(self, color, source=tuple(START), target=tuple(END), weight='weight', epsilon=0.1, lambd=0.9, feature_func=None):
+#         super().__init__(color, source, target, weight, epsilon, feature_func=feature_func)
+#         self.decay = lambd
+#         self.render_exists = False
+#         self.close_exists = False
+#         self.feature_func = feature_func
 
-    def run(self):
-        eligibility = {}
+#     def run(self):
+#         eligibility = {}
 
-        while self.state != self.target:
-            self.choose_action(self.state)
+#         while self.state != self.target:
+#             self.choose_action(self.state)
             
-            eligibility[(self.state, self.next_state)] = eligibility.get((self.state, self.next_state), 0) + 1
+#             eligibility[(self.state, self.next_state)] = eligibility.get((self.state, self.next_state), 0) + 1
 
-            for a, b in self.graph.edges:
-                eligibility[(a,b)] = eligibility.get((a,b), 0) * self.decay * self.discount
-                self.Q[(a,b)] = self.Q.get((a,b), 0) + self.lr * self.temporal_difference * eligibility[(a,b)]
+#             for a, b in self.graph.edges:
+#                 eligibility[(a,b)] = eligibility.get((a,b), 0) * self.decay * self.discount
+#                 self.Q[(a,b)] = self.Q.get((a,b), 0) + self.lr * self.temporal_difference * eligibility[(a,b)]
 
-            self.state = self.next_state
+#             self.state = self.next_state
 
 
 
