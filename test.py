@@ -131,17 +131,14 @@ def feature_func(trajectory):
     return np.array([derivs[0], derivs[1], a_list[0], a_list[1], b_list[0], b_list[1], np.mean(c_list), max(c_list)])
 
 
-t = np.linspace(0, 2 * np.pi, 1024)
-data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
 
 def draw_chart(cmap):
 
+    t = np.linspace(0, 2 * np.pi, 1024)
+    data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
     # Draw a chart of data2d with the given colormap
     fig, ax = plt.subplots()
     ax.imshow(data2d, cmap=cmap)
-    # ax.set_title(cmap.name)
-    # ax.set_axis_off()
-    # fig.tight_layout()
 
     plt.show()
     
@@ -152,10 +149,12 @@ def main():
 
     env = None
 
+    # TODO: Maybe we can just precompute the trajectories and save them to a file by using some gray color as a
+
     # Save environment as a pickle file
     import pickle
-    # with open(env_name + '.pkl', 'wb') as f:
-    #     pickle.dump(env, f)
+    with open(env_name + '.pkl', 'wb') as f:
+        pickle.dump(env, f)
     
     # Load environment from pickle file
     with open(env_name + '.pkl', 'rb') as f:

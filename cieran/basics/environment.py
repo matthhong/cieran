@@ -362,9 +362,13 @@ class QLearning(GraphEnv):
     @property
     def reward(self):
         # try:
-        #     # return -self.graph[self.state][self.next_state][self.weight]
+            # return -self.graph[self.state][self.next_state][self.weight]
         # except:
         #     breakpoint()
+        if len(self.trajectory) > 2:
+            max_accel_a = self.max_accel(self.trajectory, 1)
+            max_accel_b = self.max_accel(self.trajectory, 2)
+            return -max_accel_a - max_accel_b
         return 0
 
     @property
@@ -379,7 +383,7 @@ class QLearning(GraphEnv):
     def utility(self, state):
         if self.terminal(state):
             # Dot product of reward weights and feature vector
-            return np.dot(self.reward_weights, self.feature_func(self.trajectory[1:-1]))
+            return np.dot(self.reward_weights, self.feature_func(self.trajectory))
         else:
             return self.max_Q(state)[0]
 
@@ -393,10 +397,28 @@ class QLearning(GraphEnv):
                 max_q = q
                 max_neighbor = neighbor
         return max_q, max_neighbor
+    
+    def max_accel(trajectory, accessor):
+
+        slopes = []
+        for i in range(len(trajectory) - 1):
+            slopes.append((trajectory[i+1][accessor] - trajectory[i][accessor]) / (trajectory[i+1][0] - trajectory[i][0]))
+
+        accels = []
+        for i in range(len(slopes) - 1):
+            accels.append(slopes[i+1] - slopes[i])
+
+        max_accel = 0
+        try:
+            max_accel = abs(max(accels))
+        except ValueError:
+            pass
+
+        return max_accel/127
 
     def choose_action(self, state):
-        # self.next_state = self.greedy_epsilon(state)
-        self.next_state = self.softmax(state)
+        self.next_state = self.greedy_epsilon(state)
+        # self.next_state = self.softmax(state)
         self.trajectory.append(self.next_state)
 
     def choose_random_action(self, state):
