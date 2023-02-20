@@ -104,7 +104,7 @@ def query(color, render=None):
     return env
 
 def train(env):
-    epochs = 20000
+    epochs = 40000
     path_history = []
     reward_history = []
     print("Learning...")

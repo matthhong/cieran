@@ -483,7 +483,6 @@ class Environment(GraphEnv):
             self.choose_optimal_action(self.state)
             total_reward += self.reward - 0.01
             self.set_state(self.next_state)
-        print(self.feature_func(self.trajectory))
         return self.trajectory, total_reward
 
 

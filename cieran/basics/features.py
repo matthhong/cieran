@@ -65,22 +65,25 @@ def distance(trajectory):
     return dist/255
 
 
-def min_max(trajectory, accessor):
-    # min is either 0 or the actual min
-    min_val = 0
-    if min([accessor(point) for point in trajectory]) < 0:
-        min_val = min([accessor(point) for point in trajectory])
-    return [abs(min_val)/128, max([accessor(point) for point in trajectory])/127]
+# def min_max(trajectory, accessor):
+#     # min is either 0 or the actual min
+#     min_val = abs(min([accessor(point) for point in trajectory]))
+#     max_val = max([accessor(point) for point in trajectory])
+#     if min_val > max_val:
+#         return -min_val/128
+#     else:
+#         return max_val/127
+#     # return [abs(min_val)/128, max([accessor(point) for point in trajectory])/127]
 
 
 def feature_func(trajectory):
     # a_accel = max_accel(trajectory, accessor=lambda point: point[1])
     # b_accel = max_accel(trajectory, accessor=lambda point: point[2])
-    dist = distance(trajectory)
+    # dist = distance(trajectory)
     # a_list = min_max(trajectory, accessor=lambda point: point[1])
     # b_list = min_max(trajectory, accessor=lambda point: point[2])
     max_c = max_chroma(trajectory)
     mean_c = mean_chroma(trajectory)
     mean_theta, stdev_theta = mean_stdev_theta(trajectory)
     # return np.array([dist, max_c, mean_theta, stdev_theta])
-    return np.array([dist, mean_c, max_c, stdev_theta])
+    return np.array([mean_c, stdev_theta])
