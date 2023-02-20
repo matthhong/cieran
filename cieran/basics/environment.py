@@ -367,15 +367,16 @@ class Environment(GraphEnv):
             # return -self.graph[self.state][self.next_state][self.weight]
         # except:
         #     breakpoint()
-        rew = -0.01
-        # if len(self.trajectory) > 2:
+        # rew = -0.01
+        rew = 0
+        # if len(self.trajectory) > 2 and self.terminal(self.next_state):
         #     max_accel_a = self.max_accel(self.trajectory, 1)
         #     max_accel_b = self.max_accel(self.trajectory, 2)
         #     rew += -0.5 * (max_accel_a + max_accel_b)
-        if len(self.trajectory) > 2:
-            accel_a = self.accel(1)
-            accel_b = self.accel(2)
-            rew += -0.1 * (accel_a + accel_b)
+        # if len(self.trajectory) > 2:
+        #     accel_a = self.accel(1)
+        #     accel_b = self.accel(2)
+        #     rew += -0.1 * (accel_a + accel_b)
         # traj_len = len(self.trajectory)
         # if traj_len > 2:
         #     rew += -0.1 * traj_len
@@ -397,7 +398,7 @@ class Environment(GraphEnv):
     def utility(self, state):
         if self.terminal(state):
             # Dot product of reward weights and feature vector
-            return 0
+            return 10
         else:
             return self.max_Q(state)[0]
 
@@ -480,8 +481,9 @@ class Environment(GraphEnv):
         total_reward = 0
         while not self.terminal(self.state):
             self.choose_optimal_action(self.state)
-            total_reward += self.reward
+            total_reward += self.reward - 0.01
             self.set_state(self.next_state)
+        print(self.feature_func(self.trajectory))
         return self.trajectory, total_reward
 
 

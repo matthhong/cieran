@@ -64,8 +64,8 @@ def query(color, render=None):
     
     env = Environment(color, feature_func=feature_func)
 
-    with open(str(color) + '.pkl', 'wb') as f:
-        pickle.dump(env, f)
+    # with open(str(color) + '.pkl', 'wb') as f:
+    #     pickle.dump(env, f)
 
     # Generate trajectories here as opposed to the above
     # trajectory_set = generate_trajectories_randomly(env, num_trajectories=100, max_episode_length=300, file_name='Cieran', seed=0)
@@ -88,6 +88,10 @@ def query(color, render=None):
 
     for query_no in range(10):
         queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
+
+        # Print trajectory features for each query
+        print('Trajectory 1: ' + str(queries[0].slate[0].features))
+        print('Trajectory 2: ' + str(queries[0].slate[1].features))
 
         print('Objective Value: ' + str(objective_values[0]))
         
