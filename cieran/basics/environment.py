@@ -316,7 +316,7 @@ class GraphEnv:
 
 class Environment(GraphEnv):
 
-    def __init__(self, color, source, target, weight='weight', epsilon=0.1, feature_func=None):
+    def __init__(self, color, source=(100,0,0), target=(0,0,0), weight='weight', epsilon=0.1, feature_func=None):
         super().__init__(color)
 
         self.state_actions = {}
@@ -355,6 +355,7 @@ class Environment(GraphEnv):
         self.state = self.source
         self.trajectory = [self.state]
         self.next_state = None
+        self.total_reward = 0
 
     @property
     def state_action_value(self):
@@ -366,11 +367,20 @@ class Environment(GraphEnv):
             # return -self.graph[self.state][self.next_state][self.weight]
         # except:
         #     breakpoint()
-        if len(self.trajectory) > 2:
-            max_accel_a = self.max_accel(self.trajectory, 1)
-            max_accel_b = self.max_accel(self.trajectory, 2)
-            return -0.5 * (max_accel_a + max_accel_b)
-        return 0
+        rew = 0
+        # if len(self.trajectory) > 2:
+        #     max_accel_a = self.max_accel(self.trajectory, 1)
+        #     max_accel_b = self.max_accel(self.trajectory, 2)
+        #     rew += -0.5 * (max_accel_a + max_accel_b)
+        if len(self.trajectory) > 3:
+            accel_a = self.accel(1)
+            accel_b = self.accel(2)
+            rew += -0.1 * (accel_a + accel_b)
+
+        if self.terminal(self.next_state):
+            rew += np.dot(self.reward_weights, self.feature_func(self.trajectory))
+            
+        return rew
 
     @property
     def temporal_difference(self):
@@ -384,7 +394,7 @@ class Environment(GraphEnv):
     def utility(self, state):
         if self.terminal(state):
             # Dot product of reward weights and feature vector
-            return np.dot(self.reward_weights, self.feature_func(self.trajectory))
+            return 0
         else:
             return self.max_Q(state)[0]
 
@@ -398,6 +408,20 @@ class Environment(GraphEnv):
                 max_q = q
                 max_neighbor = neighbor
         return max_q, max_neighbor
+    
+    def accel(self, accessor):
+        # Get last three points
+        sub_trajectory = self.trajectory[-3:]
+
+        slopes = []
+        for i in range(len(sub_trajectory) - 1):
+            slopes.append((sub_trajectory[i+1][accessor] - sub_trajectory[i][accessor]) / (sub_trajectory[i+1][0] - sub_trajectory[i][0]))
+
+        accel = 0
+        for i in range(len(slopes) - 1):
+            accel = slopes[i+1] - slopes[i]
+
+        return accel/127
     
     def max_accel(self, trajectory, accessor):
 
@@ -426,6 +450,10 @@ class Environment(GraphEnv):
         self.next_state = random.choice(self.state_actions[state])
         self.trajectory.append(self.next_state)
 
+    def choose_optimal_action(self, state):
+        self.next_state = self.max_Q(state)[1]
+        self.trajectory.append(self.next_state)
+
     def greedy_epsilon(self, state):
         # Choose a random neighbor
         if random.random() < self.epsilon:
@@ -445,12 +473,14 @@ class Environment(GraphEnv):
 
     def get_best_path(self):
         # Get path that maximizes Q at each step
-        path = [self.source]
-        state = self.source
-        while not self.terminal(state):
-            state = self.max_Q(state)[1]
-            path.append(state)
-        return path
+        self.reset()
+        total_reward = 0
+        while not self.terminal(self.state):
+            self.choose_optimal_action(self.state)
+            total_reward += self.reward
+            self.set_state(self.next_state)
+        return self.trajectory, total_reward
+
 
 
 # class Environment(QLearning):

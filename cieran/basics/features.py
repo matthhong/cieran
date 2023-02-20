@@ -73,4 +73,5 @@ def feature_func(trajectory):
     # b_list = min_max(trajectory, accessor=lambda point: point[2])
     max_c = max_chroma(trajectory)
     mean_theta, stdev_theta = mean_stdev_theta(trajectory)
-    return np.array([dist, max_c, mean_theta, stdev_theta])
+    # return np.array([dist, max_c, mean_theta, stdev_theta])
+    return np.array([dist, max_c, stdev_theta])

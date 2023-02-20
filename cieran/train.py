@@ -47,23 +47,25 @@ def visualize_path(ramp):
 
     plt.show()
 
+def load_environment(color):
+    # Load environment from pickle file
+    with open(str(color) + '.pkl', 'rb') as f:
+        env = pickle.load(f)
+
+    return env
+
 def query(color, render=None):
     # Need to be able to capture hexcode, lab, rgb, or cmyk
 
     # TODO: Maybe we can just precompute the trajectories and save them to a file by using some gray color as a
 
     # Save environment as a pickle file
-    import pickle
 
-    env_name = 'Cieran'
-
-    with open(env_name + '.pkl', 'rb') as f:
-        env = pickle.load(f)
     
-    # env = Environment(color, feature_func=feature_func)
+    env = Environment(color, feature_func=feature_func)
 
-    # with open(str(color) + '.pkl', 'wb') as f:
-    #     pickle.dump(env, f)
+    with open(str(color) + '.pkl', 'wb') as f:
+        pickle.dump(env, f)
 
     # Generate trajectories here as opposed to the above
     # trajectory_set = generate_trajectories_randomly(env, num_trajectories=100, max_episode_length=300, file_name='Cieran', seed=0)
@@ -105,9 +107,9 @@ def train(env):
     for i in range(epochs):
         env.run()
 
-        path = env.get_best_path()
+        path, total_reward = env.get_best_path()
         path_history.append(path)
-        reward_history.append(np.dot(env.reward_weights, env.feature_func(path)))
+        reward_history.append(total_reward)
 
         # if i > 0 and i % 500 == 0:
         #     # Compare the reward of the current path to the reward of the path 499 epochs ago, and stop if they are the same
