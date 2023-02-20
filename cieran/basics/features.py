@@ -10,7 +10,7 @@ def max_chroma(trajectory):
 
 def mean_chroma(trajectory):
     chroma = []
-    for point in trajectory:
+    for point in trajectory[1:-1]:
         chroma.append(np.sqrt(point[1]**2 + point[2]**2))
     # Divide by 150
     return np.mean([c/150 for c in chroma])
