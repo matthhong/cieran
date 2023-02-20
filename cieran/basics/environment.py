@@ -367,15 +367,18 @@ class Environment(GraphEnv):
             # return -self.graph[self.state][self.next_state][self.weight]
         # except:
         #     breakpoint()
-        rew = 0
+        rew = -0.01
         # if len(self.trajectory) > 2:
         #     max_accel_a = self.max_accel(self.trajectory, 1)
         #     max_accel_b = self.max_accel(self.trajectory, 2)
         #     rew += -0.5 * (max_accel_a + max_accel_b)
-        if len(self.trajectory) > 3:
+        if len(self.trajectory) > 2:
             accel_a = self.accel(1)
             accel_b = self.accel(2)
             rew += -0.1 * (accel_a + accel_b)
+        # traj_len = len(self.trajectory)
+        # if traj_len > 2:
+        #     rew += -0.1 * traj_len
 
         if self.terminal(self.next_state):
             rew += np.dot(self.reward_weights, self.feature_func(self.trajectory))
