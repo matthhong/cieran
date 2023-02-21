@@ -8,13 +8,21 @@ def max_chroma(trajectory):
     # Divide by 150
     return max([c/150 for c in chroma])
 
-def mean_chroma(trajectory):
+def mean_and_slope_chroma(trajectory):
     chroma = []
     for point in trajectory[1:-1]:
         chroma.append(np.sqrt(point[1]**2 + point[2]**2))
-    # Divide by 150
-    return np.mean([c/150 for c in chroma])
 
+    # Fit a linear regression to the chroma values without using external libraries
+    x = np.array([i for i in range(len(chroma))])
+    y = np.array(chroma)
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
+    numerator = sum([(x[i] - x_mean) * (y[i] - y_mean) for i in range(len(x))])
+    denominator = sum([(x[i] - x_mean)**2 for i in range(len(x))])
+    slope = numerator / denominator
+
+    return y_mean/150, slope/20
 
 def max_accel(trajectory, accessor):
 
@@ -75,6 +83,13 @@ def distance(trajectory):
 #         return max_val/127
 #     # return [abs(min_val)/128, max([accessor(point) for point in trajectory])/127]
 
+def value_range(trajectory, accessor):
+    # min is either 0 or the actual min
+    min_val = min([accessor(point) for point in trajectory])
+    max_val = max([accessor(point) for point in trajectory])
+    return (max_val - min_val) / 127
+
+
 
 def feature_func(trajectory):
     # a_accel = max_accel(trajectory, accessor=lambda point: point[1])
@@ -83,7 +98,9 @@ def feature_func(trajectory):
     # a_list = min_max(trajectory, accessor=lambda point: point[1])
     # b_list = min_max(trajectory, accessor=lambda point: point[2])
     max_c = max_chroma(trajectory)
-    mean_c = mean_chroma(trajectory)
+    mean_c, slope_c = mean_and_slope_chroma(trajectory)
     mean_theta, stdev_theta = mean_stdev_theta(trajectory)
+    a_range = value_range(trajectory[1:-1], accessor=lambda point: point[1])
+    b_range = value_range(trajectory[1:-1], accessor=lambda point: point[2])
     # return np.array([dist, max_c, mean_theta, stdev_theta])
-    return np.array([mean_c, stdev_theta])
+    return np.array([max_c, slope_c, a_range, b_range, stdev_theta])

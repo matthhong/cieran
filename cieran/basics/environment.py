@@ -381,6 +381,11 @@ class Environment(GraphEnv):
         # if traj_len > 2:
         #     rew += -0.1 * traj_len
 
+        # if current state is the color
+        if np.all(self.state == self.color):
+            rew += 10
+            print(rew)
+
         if self.terminal(self.next_state):
             rew += np.dot(self.reward_weights, self.feature_func(self.trajectory))
             
