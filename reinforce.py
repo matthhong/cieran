@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from queue import PriorityQueue
 # Find shortest path in a graph using reinforcement learning
 # QLearning: graph, source, target, weight, alpha, gamma, epsilon, lambd -> path
 
@@ -125,6 +126,48 @@ class QLearning:
             state = self.max_Q(state)[1]
             path.append(state)
         return path
+    
+
+class Sarsa(QLearning):
+
+    def __init__(self, graph, source, target, weight='weight', epsilon=0.1):
+        super().__init__(graph, source, target, weight, epsilon)
+        self.lr = 0.4
+        self.discount = 1
+
+
+    def run(self):
+        self.next_state = self.greedy_epsilon(self.state)
+        self.trajectory.append(self.next_state)
+
+        while self.next_state != self.target:
+            next_action = self.greedy_epsilon(self.next_state)
+            self.Q[(self.state, self.next_state)] = self.state_action_value + self.lr * self.temporal_difference(next_action)
+            self.set_state(self.next_state)
+            self.next_state = next_action
+            self.trajectory.append(self.next_state)
+    
+    def temporal_difference(self, next_action):
+        return self.reward + self.discount * self.utility(self.next_state, next_action) - self.state_action_value
+
+    def utility(self, state, action):
+        if self.terminal(action):
+            return 10
+        else:
+            return self.Q.get((state, action), 0)
+        
+    def greedy_epsilon(self, state):
+        # if self.terminal(state):
+        #     return None
+        # Choose a random neighbor
+        if random.random() < self.epsilon:
+            return random.choice(self.state_actions[state])
+
+        # Choose the neighbor with the highest Q value
+        max_neighbor = self.max_Q(state)[1]
+        # breakpoint()
+        
+        return max_neighbor
 
 
 class QLambdaLearning(QLearning):
@@ -147,6 +190,54 @@ class QLambdaLearning(QLearning):
 
             self.state = self.next_state
 
+
+class PrioritizedSweeping():
+
+    def __init__(self, graph, source, target, weight='weight'):
+        self.graph = graph
+        self.source = source
+        self.target = target
+        self.weight = weight
+
+        self.state_actions = {}
+        self.posterior = {}
+        self.Q = {}
+        for node in self.graph.nodes():
+            neighbors = self.graph.neighbors(node)
+            self.state_actions[node] = list(neighbors)
+            empty_dict = {neighbor: 0 for neighbor in neighbors}
+            self.reward_model[node] = empty_dict
+            self.Q[node] = empty_dict
+
+        self.queue = PriorityQueue()
+
+        self.reset()
+
+    def reset(self):
+        self.state = self.source
+        self.trajectory = [self.state]
+        self.next_state = None
+
+    def run(self):
+        while not self.terminal(self.state):
+            self.choose_action(self.state)
+            self.update_posterior()
+            self.set_state(self.next_state)
+
+    def set_state(self, state):
+        self.state = state
+
+    @property
+    def reward(self):
+        return self.graph[self.state][self.next_state][self.weight]
+    
+    def terminal(self, state):
+        return len(self.state_actions[state]) == 0
+    
+    def update_reward_model(self):
+        for neighbor in self.state_actions[self.state]:
+            self.posterior[self.state][neighbor] = self.posterior[self.state][neighbor] + self.reward * self.Q[self.state][neighbor]
+        self.normalize_posterior()
 
 # Iterate 10000 epochs
 if __name__=='__main__':
@@ -183,7 +274,8 @@ if __name__=='__main__':
 
     # Learn
     epochs = 2000
-    env = QLearning(G, 0, 99)
+    # env = QLearning(G, 0, 99)
+    env = Sarsa(G, 0, 99)
     
     Q = env.Q.copy()
     reward_history = []
