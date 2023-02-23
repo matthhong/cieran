@@ -100,15 +100,24 @@ def query(color, render=None):
         print('Estimated user parameters: ' + str(belief.mean))
 
     env.reward_weights = belief.mean['weights']
+    best_traj = query_optimizer.planner(user_model)
 
-    return env
+    return env, best_traj
 
 def train(env):
     epochs = 20000
     path_history = []
     reward_history = []
     print("Learning...")
+
+    epsilon = 1.0
+    eps_decay_rate = 0.999
+    min_eps = 0.001
     for i in range(epochs):
+        # Decay epsilon
+        epsilon = max(epsilon * eps_decay_rate, min_eps)
+        env.epsilon = epsilon
+
         env.run()
 
         path, total_reward = env.get_best_path()
