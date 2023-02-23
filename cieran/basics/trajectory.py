@@ -34,11 +34,16 @@ class Trajectory:
     def __init__(self, env, trajectory: List[np.array], clip_path: str = None):
         # Remove first and last points of trajectory
         self.trajectory = trajectory
-        self.curve = None
+        self._curve = None
         self.clip_path = clip_path
         self._ramp = None
         self.env = env
-        self.features = env.feature_func(trajectory)
+
+        self.features = None
+        if env:
+            self.features = env.feature_func(trajectory)
+
+        self.interpolate()
 
     def __getitem__(self, t: int) -> Tuple[np.array, np.array]:
         """Returns the state-action pair at time step t of the trajectory."""
@@ -55,32 +60,28 @@ class Trajectory:
         
         :Note: FPS is fixed at 25 for video visualizations.
         """
-        if self.clip_path is not None:
-            # clip = VideoFileClip(self.clip_path)
-            # clip.preview(fps=30)
-            # clip.close()
-            pass
-        else:
-            print('Headless mode is on. Printing the trajectory information.')
-            #print(self.trajectory)
-            print('Features for this trajectory are: ' + str(self.features))
+
+    def get_curve(self, num_points):
+        t = np.linspace(0, 1, num_points)
+        at = np.linspace(0, 1, num_points)
+        points = self._curve.evaluate_list(at)    
+        return points
 
     def interpolate(self):
         # Interpolate the ramp
         if len(self.trajectory) > 3:
-            self.curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
+            self._curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
         elif len(self.trajectory) == 3:
-            self.curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
+            self._curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
         else:
-            self.curve = fitting.interpolate_curve(self.trajectory, 1, centripetal=True)
+            self._curve = fitting.interpolate_curve(self.trajectory, 1, centripetal=True)
 
     @property
     def ramp(self):
         if self._ramp is None:
-            self.interpolate()
             t = np.linspace(0, 1, 1000)
             at = np.linspace(0, 1, 1000)
-            points = self.curve.evaluate_list(at)
+            points = self._curve.evaluate_list(at)
 
             # Get the arc length of the ramp at each point using distance function
             arc_lengths = [0]
@@ -94,7 +95,7 @@ class Trajectory:
             at_t = np.interp(at, arc_lengths, t)
 
             # Get the points from the ramp using the parameterization
-            points = self.curve.evaluate_list(at_t)
+            points = self._curve.evaluate_list(at_t)
             colors = [self.lab_to_rgb(p).to_string(hex=True) for p in points]
 
             # convert to ListedColormap

@@ -110,13 +110,13 @@ def train(env):
     reward_history = []
     print("Learning...")
 
-    epsilon = 1.0
-    eps_decay_rate = 0.999
-    min_eps = 0.001
+    # epsilon = 1.0
+    # eps_decay_rate = 0.999
+    # min_eps = 0.001
     for i in range(epochs):
         # Decay epsilon
-        epsilon = max(epsilon * eps_decay_rate, min_eps)
-        env.epsilon = epsilon
+        # epsilon = max(epsilon * eps_decay_rate, min_eps)
+        # env.epsilon = epsilon
 
         env.run()
 
@@ -132,5 +132,5 @@ def train(env):
 
         env.reset()
 
-    return Trajectory(env, path_history[-1]).ramp, path_history, reward_history
+    return Trajectory(env, path_history[-1]), path_history, reward_history
 
