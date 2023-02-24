@@ -87,7 +87,8 @@ def query(color, render=None):
     query = WeakComparisonQuery(trajectory_set[:2], chart=render)
 
     for query_no in range(10):
-        queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
+        queries, objective_values = query_optimizer.optimize('disagreement', belief, query)
+        # queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
 
         # Print trajectory features for each query
         print('Trajectory 1: ' + str(queries[0].slate[0].features))

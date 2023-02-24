@@ -135,7 +135,7 @@ class KDTree:
 class GraphEnv:
 
     def __init__(self, color):
-        self.color = color
+        self.color = [round(x) for x in color]
         self.ramps = self.load_ramps()
         self.centroids = self.load_centroids()
 
@@ -148,21 +148,42 @@ class GraphEnv:
         self.fitted_ramps = []
         tree = KDTree(self.centroids)
         num_out_of_gamut = 0
+
+        seed_centroid = tree.query(self.color, k=1)[1][0]
+        diff = np.array(self.color) - np.array(seed_centroid)
+        # breakpoint()
+
+        #time this
+        import time
+        start = time.time()
+
+        num_out_of_gamut = 0
         for ramp in self.ramps:
-            translated_ramp = self.fit_ramp_to_color(ramp, self.color)   
+            translated_ramp = self.fit_ramp_to_color(ramp, self.color)  
 
             new_ramp = []
 
             last_centroid = None
+            out_of_gamut = False
             # Check if every point in the ramp is in gamut
-            for i in range(len(translated_ramp)):
+            i = 0
+            while not out_of_gamut and i < len(translated_ramp):
                 point = translated_ramp[i]
-                # round the point to the nearest integer
-                # point = [custom_round(x) - diff[i] for i, x in enumerate(point)]
+                i += 1
 
-                # Find the nearest centroid to the point using KDTree
-                tree = KDTree(self.centroids)
-                nearest_centroid = tree.query(point, k=1)[1][0]
+                if np.all(point == self.color):
+                    nearest_centroid = seed_centroid
+                else:
+
+                    # Check if the point is valid
+                    if point[0] > 100 or point[0] < 0:
+                        continue
+                    # round the point to the nearest integer
+                    # point = [custom_round(x) - diff[i] for i, x in enumerate(point)]
+
+                    # Find the nearest centroid to the point using KDTree
+                    tree = KDTree(self.centroids)
+                    nearest_centroid = tree.query(point, k=1)[1][0]
                 # if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
                 #     if not out_of_gamut:
                 #         num_out_of_gamut += 1
@@ -170,16 +191,26 @@ class GraphEnv:
                 # self.graph.add_node(tuple(point))
                 # if not out_of_gamut:
                 # breakpoint()
-                if last_centroid is not None:
+                if len(new_ramp) > 0:
                     # Compare the first element between the last centroid and the current centroid
-                    l_diff = last_centroid[0] - nearest_centroid[0]
-                    if l_diff >= 0:
+                    l_diff = new_ramp[-1][0] - nearest_centroid[0]
+
+                    if l_diff > 0 and np.all(point == self.color):
+                        new_ramp.pop()
+                    elif l_diff > 0:
                         continue
+
+                if not Color("lab({}% {} {} / 1)".format(*nearest_centroid)).in_gamut('srgb'):
+                    out_of_gamut = True
+                    num_out_of_gamut += 1
                 new_ramp.append(nearest_centroid)
-                last_centroid = nearest_centroid
         
-            self.fitted_ramps.append(new_ramp)
+            if not out_of_gamut:
+                self.fitted_ramps.append(new_ramp)
         
+        end = time.time()
+        taken = end - start
+        print("Time to fit ramps in seconds: " + str(taken))
         print("num ramps: " + str(len(self.fitted_ramps)))
         print("num out of gamut: " + str(num_out_of_gamut))
 
@@ -212,15 +243,16 @@ class GraphEnv:
 
             
         # Add the ramp points to the graph, and edges between adjacent ramp points
-        for i, ramp in enumerate(self.fitted_ramps):
+        for i in range(len(self.fitted_ramps)):
             # Put start and end points into the ramp
-            self.fitted_ramps[i] = [END] + ramp + [START]
-            ramp = self.fitted_ramps[i]
-            for i in range(len(ramp)-1, 0, -1):
-                distance = np.linalg.norm(ramp[i] - ramp[i-1])
-                if np.all(ramp[i] == END) or np.all(ramp[i-1] == START):
+            ramp = [END] + self.fitted_ramps[i] + [START]
+            for j in range(len(ramp)-1, 0, -1):
+                distance = np.linalg.norm(ramp[j] - ramp[j-1])
+                if np.all(ramp[j] == END) or np.all(ramp[j-1] == START):
                     distance = 0
-                self.graph.add_edge(tuple(ramp[i]), tuple(ramp[i-1]), weight=distance)
+                self.graph.add_edge(tuple(ramp[j]), tuple(ramp[j-1]), weight=distance)
+            # Reverse fitted ramp
+            self.fitted_ramps[i] = np.array(ramp[::-1])
 
     
 
@@ -265,7 +297,7 @@ class GraphEnv:
                 for i in range(0, len(values), 3):
                     point = np.array([float(values[i]), float(values[i+1]), float(values[i+2])])
                     ramp = np.append(ramp, [point], axis=0)
-                # Sort the ramp by luminance
+                # Sort the ramp by luminance in reverse order
                 ramp = ramp[ramp[:,0].argsort()]
                 ramps = np.concatenate((ramps, ramp[np.newaxis, ...]), axis=0)
         return ramps
@@ -305,9 +337,9 @@ class GraphEnv:
 
         for point in curve:
             translated_point = []
-            translated_point.append(point[0] - translation_vector_x)
-            translated_point.append(point[1] - translation_vector_y)
-            translated_point.append(point[2] - translation_vector_z)
+            translated_point.append(round(point[0] - translation_vector_x, 2))
+            translated_point.append(round(point[1] - translation_vector_y, 2))
+            translated_point.append(round(point[2] - translation_vector_z, 2))
 
             translated_curve.append(translated_point)
 
@@ -524,6 +556,21 @@ if __name__ == "__main__":
     # Visualize the states in 3D LAB space
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
+    import networkx as nx
+
+    # Average number of neighbors per node
+    graph = states.graph
+    print("Average number of neighbors per node:", sum([len([neighbor for neighbor in graph.neighbors(node)]) for node in graph.nodes]) / len(graph.nodes))
+
+    # Visualize the degree distribution
+    degrees = [len([neighbor for neighbor in graph.neighbors(node)]) for node in graph.nodes]
+    plt.hist(degrees, bins=range(1, max(degrees) + 1))
+    plt.xlabel('Degree')
+    plt.ylabel('Number of nodes')
+    plt.show()
+
+    # Reset figure
+    plt.clf()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
