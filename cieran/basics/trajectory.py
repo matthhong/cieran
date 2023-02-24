@@ -69,12 +69,15 @@ class Trajectory:
 
     def interpolate(self):
         # Interpolate the ramp
-        if len(self.trajectory) > 3:
-            self._curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
-        elif len(self.trajectory) == 3:
-            self._curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
-        else:
-            self._curve = fitting.interpolate_curve(self.trajectory, 1, centripetal=True)
+        try:
+            if len(self.trajectory) > 3:
+                self._curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
+            elif len(self.trajectory) == 3:
+                self._curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
+            else:
+                self._curve = fitting.interpolate_curve(self.trajectory, 1, centripetal=True)
+        except:
+            breakpoint()
 
     @property
     def ramp(self):

@@ -195,9 +195,9 @@ class GraphEnv:
                     # Compare the first element between the last centroid and the current centroid
                     l_diff = new_ramp[-1][0] - nearest_centroid[0]
 
-                    if l_diff > 0 and np.all(point == self.color):
+                    if l_diff >= 0 and np.all(point == self.color):
                         new_ramp.pop()
-                    elif l_diff > 0:
+                    elif l_diff >= 0:
                         continue
 
                 if not Color("lab({}% {} {} / 1)".format(*nearest_centroid)).in_gamut('srgb'):
@@ -252,7 +252,7 @@ class GraphEnv:
                     distance = 0
                 self.graph.add_edge(tuple(ramp[j]), tuple(ramp[j-1]), weight=distance)
             # Reverse fitted ramp
-            self.fitted_ramps[i] = np.array(ramp[::-1])
+            self.fitted_ramps[i] = ramp[::-1]
 
     
 
