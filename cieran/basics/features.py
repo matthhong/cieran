@@ -90,6 +90,13 @@ def value_range(trajectory, accessor):
     return (max_val - min_val) / 127
 
 
+def distance_from_corner(trajectory, corner):
+    # Compute the distance from the corner (e.g. (-128, 127)) to each point in the trajectory and return the min
+    dist = []
+    for point in trajectory:
+        dist.append(np.sqrt((corner[0] - point[1])**2 + (corner[1] - point[2])**2))
+    return min(dist)/255
+
 
 def feature_func(trajectory):
     # a_accel = max_accel(trajectory, accessor=lambda point: point[1])
@@ -99,8 +106,13 @@ def feature_func(trajectory):
     # b_list = min_max(trajectory, accessor=lambda point: point[2])
     max_c = max_chroma(trajectory)
     mean_c, slope_c = mean_and_slope_chroma(trajectory)
-    mean_theta, stdev_theta = mean_stdev_theta(trajectory)
+    # mean_theta, stdev_theta = mean_stdev_theta(trajectory)
     a_range = value_range(trajectory[1:-1], accessor=lambda point: point[1])
     b_range = value_range(trajectory[1:-1], accessor=lambda point: point[2])
+
+    corner1 = distance_from_corner(trajectory, (127, 127))
+    corner2 = distance_from_corner(trajectory, (127, -128))
+    corner3 = distance_from_corner(trajectory, (-128, -128))
+    corner4 = distance_from_corner(trajectory, (-128, 127))
     # return np.array([dist, max_c, mean_theta, stdev_theta])
-    return np.array([max_c, slope_c, a_range, b_range, stdev_theta])
+    return np.array([slope_c, a_range, b_range, corner1, corner2, corner3, corner4])

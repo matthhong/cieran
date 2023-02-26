@@ -135,7 +135,8 @@ class KDTree:
 class GraphEnv:
 
     def __init__(self, color):
-        self.color = [round(x) for x in color]
+        # self.color = [round(x) for x in color]
+        self.color = color
         self.ramps = self.load_ramps()
         self.centroids = self.load_centroids()
 
@@ -184,6 +185,9 @@ class GraphEnv:
                     # Find the nearest centroid to the point using KDTree
                     tree = KDTree(self.centroids)
                     nearest_centroid = tree.query(point, k=1)[1][0]
+
+                    if nearest_centroid[0] > 100:
+                        breakpoint()
                 # if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
                 #     if not out_of_gamut:
                 #         num_out_of_gamut += 1
@@ -203,7 +207,9 @@ class GraphEnv:
                 if not Color("lab({}% {} {} / 1)".format(*nearest_centroid)).in_gamut('srgb'):
                     out_of_gamut = True
                     num_out_of_gamut += 1
-                new_ramp.append(nearest_centroid)
+
+                else:
+                    new_ramp.append(nearest_centroid)
         
             if not out_of_gamut:
                 self.fitted_ramps.append(new_ramp)
