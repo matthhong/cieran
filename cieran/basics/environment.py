@@ -164,9 +164,13 @@ class GraphEnv:
 
             new_ramp = []
 
-            last_centroid = None
             out_of_gamut = False
             # Check if every point in the ramp is in gamut
+            for point in translated_ramp:
+                if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
+                    out_of_gamut = True
+                    num_out_of_gamut += 1
+
             i = 0
             while not out_of_gamut and i < len(translated_ramp):
                 point = translated_ramp[i]
@@ -204,12 +208,7 @@ class GraphEnv:
                     elif l_diff >= 0:
                         continue
 
-                if not Color("lab({}% {} {} / 1)".format(*nearest_centroid)).in_gamut('srgb'):
-                    out_of_gamut = True
-                    num_out_of_gamut += 1
-
-                else:
-                    new_ramp.append(nearest_centroid)
+                new_ramp.append(nearest_centroid)
         
             if not out_of_gamut:
                 self.fitted_ramps.append(new_ramp)
