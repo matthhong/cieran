@@ -6,7 +6,7 @@ Modules for queries and user responses.
     "ROIAL: Region of Interest Active Learning for Characterizing Exoskeleton Gait Preference Landscapes", ICRA'21.
 """
 from typing import List, Union
-from copy import deepcopy
+from copy import deepcopy, copy
 import itertools
 import numpy as np
 import time
@@ -21,15 +21,27 @@ from coloraide import Color
 from IPython.display import display, clear_output
 import ipywidgets as widgets
     
+t = np.linspace(0, 2 * np.pi, 1024)
+data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
 
 def default_chart(cmap):
-    t = np.linspace(0, 2 * np.pi, 1024)
-    data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
-
+   
     fig, ax = plt.subplots()
     ax.imshow(data2d, cmap=cmap)
 
     plt.show()
+
+def is_notebook() -> bool:
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
 
 
 class Query:
@@ -43,7 +55,8 @@ class Query:
         
     def copy(self):
         """Returns a deep copy of the query."""
-        return deepcopy(self)
+        # return deepcopy(self)
+        return copy(self)
         
     def visualize(self, delay: float = 0.):
         """Visualizes the query, i.e., asks it to the user.
@@ -89,7 +102,7 @@ class WeakComparisonQuery(Query):
         AssertionError: if slate does not have exactly 2 trajectories.
     """
     def __init__(self, slate: Union[TrajectorySet, List[Trajectory]], chart=None):
-        super(WeakComparisonQuery, self).__init__()
+        super().__init__()
         assert isinstance(slate, TrajectorySet) or isinstance(slate, list), 'Query constructor requires a TrajectorySet object for the slate.'
         self.slate = slate
         self.chart = chart
@@ -118,28 +131,37 @@ class WeakComparisonQuery(Query):
         """
         ramp1 = self.slate[0].ramp
         ramp2 = self.slate[1].ramp
-        out = widgets.Output()
 
-        if self.chart is None:
-            self.chart = default_chart
+        if is_notebook():
+            if self.chart is None:
+                self.chart = default_chart
 
-        plot_widget1 = widgets.Output()
-        plot_widget2 = widgets.Output()
+            out = widgets.Output()
 
-        with plot_widget1:
-            self.chart(ramp1)
+            plot_widget1 = widgets.Output()
+            plot_widget2 = widgets.Output()
 
-        with plot_widget2:
-            self.chart(ramp2)
+            with plot_widget1:
+                self.chart(ramp1)
 
-        box_layout = widgets.Layout(display='flex',
-                        flex_flow='row',
-                        justify_content='space-around')
-        plots_hbox = widgets.HBox([plot_widget1, plot_widget2], layout=box_layout)
+            with plot_widget2:
+                self.chart(ramp2)
 
-        display(out)
-        with out:
-            display(plots_hbox)
+            box_layout = widgets.Layout(display='flex',
+                            flex_flow='row',
+                            justify_content='space-around')
+            plots_hbox = widgets.HBox([plot_widget1, plot_widget2], layout=box_layout)
+
+            display(out)
+            with out:
+                display(plots_hbox)
+        
+        else:
+            fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+            im1=ax[0].imshow(data2d, cmap=ramp1)
+            im2=ax[1].imshow(data2d, cmap=ramp2)
+
+            plt.show()
 
         selection = None
         while selection is None:
@@ -149,6 +171,7 @@ class WeakComparisonQuery(Query):
                 selection = None
         clear_output()
         return int(selection)
+
 
 
 class WeakComparison(QueryWithResponse):
@@ -168,7 +191,7 @@ class WeakComparison(QueryWithResponse):
         AssertionError: if the response is not in the response set of the query.
     """
     def __init__(self, query: WeakComparisonQuery, response: int):
-        super(WeakComparison, self).__init__(query)
+        super().__init__(query)
         assert(response in self.query.response_set), 'Invalid response ' + str(response) +  ' for the weak comparison query.'
         self.response = response
 

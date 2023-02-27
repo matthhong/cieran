@@ -20,9 +20,6 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 
 
-# def update_plot(ramp):
-#     # I want the below visualization, but the plot needs to update when the ramp changes
-
 
 
 def visualize_path(ramp):

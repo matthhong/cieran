@@ -256,7 +256,10 @@ class QueryOptimizerDiscreteTrajectorySet(QueryOptimizer):
                 vals = np.array(vals)
                 inds = np.argpartition(vals, -batch_size)[-batch_size:]
 
-                best_batch = [initial_query.copy() for _ in range(batch_size)]
+                try:
+                    best_batch = [initial_query.copy() for _ in range(batch_size)]
+                except:
+                    breakpoint()
                 temp_user = belief.user_model.copy()
                 for i in range(batch_size):
                     trajectories = []
