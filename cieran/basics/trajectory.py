@@ -43,7 +43,7 @@ class Trajectory:
         if env:
             self.features = env.feature_func(trajectory)
 
-        # self.interpolate()
+        self.interpolate()
 
     def __getitem__(self, t: int) -> Tuple[np.array, np.array]:
         """Returns the state-action pair at time step t of the trajectory."""
@@ -67,38 +67,38 @@ class Trajectory:
     #     points = self._curve.evaluate_list(at)    
     #     return points
 
-    # def interpolate(self):
-    #     # Interpolate the ramp
-    #     # try:
-    #     #     if len(self.trajectory) > 3:
-    #     #         self._curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
-    #     #     elif len(self.trajectory) == 3:
-    #     #         self._curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
-    #     #     else:
-    #     #         self._curve = fitting.interpolate_curve(self.trajectory, 1, centripetal=True)
-    #     # except:
-    #     #     breakpoint()
-    #     try:
-    #         controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
-    #         self._curve = Color.interpolate(controls, method='monotone')
-    #     except:
-    #         pass
+    def interpolate(self):
+        # Interpolate the ramp
+        try:
+            if len(self.trajectory) > 3:
+                self._curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
+            elif len(self.trajectory) == 3:
+                self._curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
+            else:
+                self._curve = fitting.interpolate_curve(self.trajectory, 1, centripetal=True)
+        except:
+            breakpoint()
+        # try:
+        #     controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
+        #     self._curve = Color.interpolate(controls, method='monotone')
+        # except:
+        #     pass
 
     @property
     def ramp(self):
         if self._ramp is None:
             controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
-            self._curve = Color.interpolate(controls, method='monotone')
+            # self._curve = Color.interpolate(controls, method='natural')
         
             t = np.linspace(0, 1, 256)
             at = np.linspace(0, 1, 256)
-            # points = self._curve.evaluate_list(at)
-            points = [self._curve(index) for index in at]
+            points = self._curve.evaluate_list(at)
+            # points = [self._curve(index) for index in at]
 
             # Get the arc length of the ramp at each point using distance function
             arc_lengths = [0]
             for i in range(1, len(points)):
-                arc_lengths.append(arc_lengths[i-1] + self.distance(points[i-1], points[i]))
+                arc_lengths.append(arc_lengths[i-1] + self.distance_lab(points[i-1], points[i]))
 
             # Normalize the arc lengths
             arc_lengths = np.array(arc_lengths) / arc_lengths[-1]
@@ -107,9 +107,9 @@ class Trajectory:
             at_t = np.interp(at, arc_lengths, t)
 
             # Get the points from the ramp using the parameterization
-            # points = self._curve.evaluate_list(at_t)
-            # colors = [self.lab_to_rgb(p).to_string(hex=True) for p in points]
-            colors = [self._curve(index).convert('srgb').to_string(hex=True) for index in at_t]
+            points = self._curve.evaluate_list(at_t)
+            colors = [self.lab_to_rgb(p).to_string(hex=True) for p in points]
+            # colors = [self._curve(index).convert('srgb').to_string(hex=True) for index in at_t]
 
             # convert to ListedColormap
             self._ramp = ListedColormap(colors)
