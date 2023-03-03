@@ -112,32 +112,32 @@ class GraphEnv:
         # print("num ramps: " + str(len(self.fitted_ramps)))
         # print("num out of gamut: " + str(num_out_of_gamut))
 
-        # Visualize the states in 3D LAB space
-        # import matplotlib.pyplot as plt
-        # from mpl_toolkits.mplot3d import Axes3D
+        #Visualize the states in 3D LAB space
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
 
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111, projection='3d')
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
 
-        # for ramp in self.fitted_ramps:
-        #     ramp = np.array(ramp)
-        #     ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
+        for ramp in self.fitted_ramps:
+            ramp = np.array(ramp)
+            ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
 
-        # # Display all nodes as scatter plot, in gray
-        # print("Number of nodes:", len(self.graph.nodes))
+        # Display all nodes as scatter plot, in gray
+        print("Number of nodes:", len(self.graph.nodes))
 
-        # print("Number of original colors:" , len(self.fitted_ramps * 9))
-        # for node in self.graph.nodes:
-        #     # if not in any ramp
-        #     if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
-        #         ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
+        print("Number of original colors:" , len(self.fitted_ramps * 9))
+        for node in self.graph.nodes:
+            # if not in any ramp
+            if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
+                ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
         
-        # # Label the axes
-        # ax.set_xlabel('L')
-        # ax.set_ylabel('A')
-        # ax.set_zlabel('B')
+        # Label the axes
+        ax.set_xlabel('L')
+        ax.set_ylabel('A')
+        ax.set_zlabel('B')
 
-        # plt.show()
+        plt.show()
 
             
         # Add the ramp points to the graph, and edges between adjacent ramp points
@@ -215,13 +215,32 @@ class GraphEnv:
 
         closest_point = ramp[min_distance_index]
 
+
+        # Compute the difference in angle between the two points with regards to roll axis
+        angle = np.arctan2(closest_point[1], closest_point[2]) - np.arctan2(lab_color[1], lab_color[2])
+
+        # Compute the rotation matrix
+        rotation_matrix = np.array([[1, 0, 0], [0, np.cos(angle), -np.sin(angle)], [0, np.sin(angle), np.cos(angle)]])
+
+            # Rotate the ramp
+        rotated_ramp = []
+        for point in ramp:
+            rotated_point = np.dot(rotation_matrix, point)
+            rotated_ramp.append(rotated_point)
+
+        # Compute the translation vector
+        translation = [0, 0, 0]
+        translation[0] = rotated_ramp[min_distance_index][0] - lab_color[0]
+        translation[1] = rotated_ramp[min_distance_index][1] - lab_color[1]
+        translation[2] = rotated_ramp[min_distance_index][2] - lab_color[2]
+
         difference_vector = [0, 0, 0]
         new_start_color = [0, 0, 0]
         for i in range(3):
-            difference_vector[i] = closest_point[i] - lab_color[i]
-            new_start_color[i] = ramp[0][i] - difference_vector[i]
+            difference_vector[i] = rotated_ramp[min_distance_index][i] - lab_color[i]
+            new_start_color[i] = rotated_ramp[0][i] - difference_vector[i]
 
-        new_ramp = self.translate_curve(ramp, new_start_color)
+        new_ramp = self.translate_curve(rotated_ramp, new_start_color)
 
         return new_ramp
 

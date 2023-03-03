@@ -19,7 +19,7 @@ print(len(env.centroids))
 if __name__ == '__main__':
 
     # Export both env.centroids and num_ramps as a space-delimited file, where each line is a color and the number of ramps for that color
-    with open('ramps_per_color.txt', 'w') as f:
+    with open('ramps_per_color2.txt', 'w') as f:
         for i, centroid in enumerate(env.centroids):
             env = cieran.initialize(list(centroid))
             print("Step " + str(i))
@@ -29,7 +29,7 @@ if __name__ == '__main__':
             f.write(str(len(env.fitted_ramps)))
             f.write('\n')
 
-    # Export both env.centroids and num_ramps as a space-delimited file, where each line is a color and the number of ramps for that color
-    with open('ramps_per_color.txt', 'w') as f:
-        for i in range(len(env.centroids)):
-            f.write(str(list(env.centroids[i])) + ' ' + str(num_ramps[i]))
+    # # Export both env.centroids and num_ramps as a space-delimited file, where each line is a color and the number of ramps for that color
+    # with open('ramps_per_color.txt', 'w') as f:
+    #     for i in range(len(env.centroids)):
+    #         f.write(str(list(env.centroids[i])) + ' ' + str(num_ramps[i]))

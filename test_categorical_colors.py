@@ -49,7 +49,7 @@ def load_cat_colors():
 
 ind = load_cat_colors()
 
-NUM_RAMPS_FILE = 'ramps_per_color.txt'
+NUM_RAMPS_FILE = 'ramps_per_color2.txt'
 
 # Load the number of ramps and filter by ind
 def load_num_ramps():
@@ -65,6 +65,7 @@ def load_num_ramps():
 
     colors = points[num_ramps]
     hex_values = [Color("lab({}% {} {} / 1)".format(*c[0])).convert('srgb').to_string(hex=True) for c in colors]
+    breakpoint()
     
     # Write the hex values to a file
     with open('hex_values.txt', 'w') as f:

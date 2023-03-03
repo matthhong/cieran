@@ -32,13 +32,53 @@ def fit_ramp_to_color(ramp, lab_color):
             min_distance = distance
             min_distance_index = i
 
-    closest_point = ramp[min_distance_index]
+    lab_color = np.array(lab_color)
+    closest_point = np.array(ramp[min_distance_index])
 
-    # Compute translation vector to move the closest point to the given color
+    # Compute the difference in angle between the two points with regards to roll axis
+    angle = np.arctan2(closest_point[1], closest_point[2]) - np.arctan2(lab_color[1], lab_color[2])
+
+    # Compute the rotation matrix
+    rotation_matrix = np.array([[1, 0, 0], [0, np.cos(angle), -np.sin(angle)], [0, np.sin(angle), np.cos(angle)]])
+
+    # Compute the new closest point
+    # closest_point = np.matmul(rotation_matrix, closest_point)
+
+    # # Compute the translation vector
+    # translation = closest_point - lab_color
+
+    # # Compute new start color
+    # new_start_color = ramp[0] - translation
+
+    # # Compute the new ramp
+    # new_ramp = translate_curve(ramp, new_start_color)
+
+        # Rotate the ramp
+    rotated_ramp = []
+    for point in ramp:
+        rotated_point = np.dot(rotation_matrix, point)
+        rotated_ramp.append(rotated_point)
+    new_ramp = rotated_ramp
+
+    # Compute the translation vector
     translation = [0, 0, 0]
-    translation[0] = closest_point[0] - lab_color[0]
-    translation[1] = closest_point[1] - lab_color[1]
-    translation[2] = closest_point[2] - lab_color[2]
+    translation[0] = rotated_ramp[min_distance_index][0] - lab_color[0]
+    translation[1] = rotated_ramp[min_distance_index][1] - lab_color[1]
+    translation[2] = rotated_ramp[min_distance_index][2] - lab_color[2]
+
+    difference_vector = [0, 0, 0]
+    new_start_color = [0, 0, 0]
+    for i in range(3):
+        difference_vector[i] = rotated_ramp[min_distance_index][i] - lab_color[i]
+        new_start_color[i] = rotated_ramp[0][i] - difference_vector[i]
+
+    new_ramp = translate_curve(rotated_ramp, new_start_color)
+
+    # # Compute translation vector to move the closest point to the given color
+    # translation = [0, 0, 0]
+    # translation[0] = closest_point[0] - lab_color[0]
+    # translation[1] = closest_point[1] - lab_color[1]
+    # translation[2] = closest_point[2] - lab_color[2]
 
     # difference_vector = [0, 0, 0]
     # new_start_color = [0, 0, 0]
@@ -48,9 +88,9 @@ def fit_ramp_to_color(ramp, lab_color):
 
     # new_ramp = translate_curve(ramp, new_start_color)
 
-    new_ramp = []
-    for point in ramp:
-        new_ramp.append([point[0] - translation[0], point[1] - translation[1], point[2] - translation[2]])
+    # new_ramp = []
+    # for point in ramp:
+    #     new_ramp.append([point[0] - translation[0], point[1] - translation[1], point[2] - translation[2]])
 
     return new_ramp
 

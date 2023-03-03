@@ -1,5 +1,5 @@
 
-FILE_NAME = 'ramps_per_color.txt'
+FILE_NAME = 'ramps_per_color2.txt'
 import numpy as np
 from coloraide import Color
 
@@ -50,20 +50,20 @@ if __name__ == '__main__':
     # In the first one, x-axis is hue value and y-axis is the number of colors with that hue value
     # In the second one, x-axis is saturation value and y-axis is the number of colors with that saturation value
     # In the third one, x-axis is lightness value and y-axis is the number of colors with that lightness value
-    import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(3)
-    axs[0].hist(hsl_data[:,0], bins=range(0, 360 + 1, 10))
-    axs[0].set_xlabel('Hue')
-    axs[0].set_ylabel('Number of colors')
+    # import matplotlib.pyplot as plt
+    # fig, axs = plt.subplots(3)
+    # axs[0].hist(hsl_data[:,0], bins=range(0, 360 + 1, 10))
+    # axs[0].set_xlabel('Hue')
+    # axs[0].set_ylabel('Number of colors')
 
-    axs[1].hist(hsl_data[:,1], bins=np.arange(0, 1, 0.1))
-    axs[1].set_xlabel('Saturation')
-    axs[1].set_ylabel('Number of colors')
+    # axs[1].hist(hsl_data[:,1], bins=np.arange(0, 1, 0.1))
+    # axs[1].set_xlabel('Saturation')
+    # axs[1].set_ylabel('Number of colors')
 
-    axs[2].hist(hsl_data[:,2], bins=np.arange(0, 1, 0.1))
-    axs[2].set_xlabel('Lightness')
-    axs[2].set_ylabel('Number of colors')
-    plt.show()
+    # axs[2].hist(hsl_data[:,2], bins=np.arange(0, 1, 0.1))
+    # axs[2].set_xlabel('Lightness')
+    # axs[2].set_ylabel('Number of colors')
+    # plt.show()
 
     # data = load_data()
     # select_seed_colors()
