@@ -19,6 +19,9 @@ if __name__ == "__main__":
 
     env = Environment([48.325, -19.2993, -16.5717])
 
+    # import pickle
+    # with open('test.pkl', 'wb') as f:
+
     breakpoint()
 
     import networkx as nx

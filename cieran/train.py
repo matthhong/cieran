@@ -16,10 +16,17 @@ import pickle
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
+from coloraide import Color
 
 import numpy as np
 
 
+
+def initialize(color):
+    if isinstance(color, str):
+        color = Color(color).convert('lab')._coords[:-1]
+    env = Environment(color, feature_func=feature_func)
+    return env
 
 
 def visualize_path(ramp):
@@ -51,15 +58,13 @@ def load_environment(color):
 
     return env
 
-def query(color, render=None):
+def query(env, render=None):
     # Need to be able to capture hexcode, lab, rgb, or cmyk
 
     # TODO: Maybe we can just precompute the trajectories and save them to a file by using some gray color as a
 
     # Save environment as a pickle file
-
     
-    env = Environment(color, feature_func=feature_func)
 
     # with open(str(color) + '.pkl', 'wb') as f:
     #     pickle.dump(env, f)
@@ -83,7 +88,7 @@ def query(color, render=None):
                                         
     query = WeakComparisonQuery(trajectory_set[:2], chart=render)
 
-    for query_no in range(10):
+    for query_no in range(20):
         queries, objective_values = query_optimizer.optimize('disagreement', belief, query)
         # queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
 

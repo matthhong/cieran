@@ -106,7 +106,7 @@ def feature_func(trajectory):
     # b_list = min_max(trajectory, accessor=lambda point: point[2])
     max_c = max_chroma(trajectory)
     mean_c, slope_c = mean_and_slope_chroma(trajectory)
-    # mean_theta, stdev_theta = mean_stdev_theta(trajectory)
+    mean_theta, stdev_theta = mean_stdev_theta(trajectory)
     a_range = value_range(trajectory[1:-1], accessor=lambda point: point[1])
     b_range = value_range(trajectory[1:-1], accessor=lambda point: point[2])
 
@@ -115,4 +115,5 @@ def feature_func(trajectory):
     corner3 = distance_from_corner(trajectory, (-128, -128))
     corner4 = distance_from_corner(trajectory, (-128, 127))
     # return np.array([dist, max_c, mean_theta, stdev_theta])
-    return np.array([slope_c, a_range, b_range, corner1, corner2, corner3, corner4])
+    return np.array([slope_c, stdev_theta, max_c, corner1, corner2, corner3, corner4])
+    # return np.array([slope_c, a_range, b_range, corner1, corner2, corner3, corner4])

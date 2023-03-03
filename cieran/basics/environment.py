@@ -3,6 +3,7 @@ import numpy as np
 import networkx as nx
 
 from scipy.stats.qmc import Halton
+from sklearn.neighbors import KDTree
 from typing import Callable, List, Tuple, Union
 import random
 
@@ -24,114 +25,6 @@ from coloraide import Color
 
 from queue import PriorityQueue
 
-# KDTreeNode: points, depth -> KDTreeNode
-class KDTreeNode:
-    def __init__(self, points, depth = 0):
-        self.points = points
-        self.left = None
-        self.right = None
-        self.mid = None
-
-        self.split_axis = depth % 3
-
-        # sort points by split_axis
-        points = points[points[:, self.split_axis].argsort()]
-
-        if len(points) > 1:
-            # split points into left and right
-            mid = len(points) // 2
-            self.mid = points[mid]
-            self.left = KDTreeNode(points[:mid], depth + 1)
-            self.right = KDTreeNode(points[mid:], depth + 1)
-
-
-# KDTree: points -> KDTree
-class KDTree:
-    def __init__(self, points, constrained_axis=None, direction=1, obstacles=None, obstacle_cost_multiplier=1):
-        self.constrained_axis = constrained_axis
-        self.root = KDTreeNode(points)
-        self.direction = direction
-        self.obstacles = obstacles
-        self.obstacle_cost_multiplier = obstacle_cost_multiplier
-
-    # query: point, k -> (distances, points)
-    def query(self, point, k):
-        # Create a priority queue
-        queue = PriorityQueue(maxsize=k)
-
-        # Recursively search the tree
-        self._query(self.root, point, k, queue)
-        # Return the k nearest neighbors
-        try:
-            distances, points = np.array(queue.queue).T
-        except:
-            raise Exception("No points found in tree")
-        return -distances, np.stack(points)
-
-
-    # _query: node, point, k, queue -> None
-    def _query(self, node, point, k, queue):
-        # If the node is empty, return
-        if node is None:
-            return
-
-        # If the node is a leaf, check the points in the node
-        if node.left is None and node.right is None:
-            for p in node.points:
-
-                # Custom skip
-                if self.constrained_axis is not None:
-                    # Check if current point has a higher value than the query point on the constrained axis
-                    if not (self.direction * (p[self.constrained_axis] - point[self.constrained_axis]) > 0):
-                        continue
-
-                # Compute the distance from the point to the query point
-                dist = np.linalg.norm(point - p)
-
-                # Compute the average distance from the point to obstacles
-                # obstacle_dist = 0
-                # for obstacle in self.obstacles:
-                #     obstacle_dist += np.linalg.norm(p - obstacle)
-                # # breakpoint()
-                
-                # if len(self.obstacles) > 0:
-                #     obstacle_dist /= len(self.obstacles) * self.obstacle_cost_multiplier
-
-                # # Cost is the distance of moving to the point, but there is reward for moving away from obstacles
-                # dist -= obstacle_dist
-
-                # If the queue is not full, add the point
-                if queue.qsize() < k:
-                    queue.put((-dist, p))
-
-                # Otherwise, check if the point is closer than the furthest point in the queue
-                else:
-                    # If the point is closer, remove the furthest point and add the new point
-                    if dist < -queue.queue[0][0]:
-                        queue.get()
-                        queue.put((-dist, p))
-
-            return
-        
-        # If the node is not a leaf, check which side of the splitting plane the point is on
-        # Compute the distance from the point to the splitting plane
-        dist = point[node.split_axis] - node.mid[node.split_axis]
-
-        # Search the side of the splitting plane that is closest to the point
-        if dist < 0:
-            if node.left is not None:
-                self._query(node.left, point, k, queue)
-            if node.right is not None:
-                self._query(node.right, point, k, queue)
-        else:
-            if node.right is not None:
-                self._query(node.right, point, k, queue)
-            if node.left is not None:
-                self._query(node.left, point, k, queue)
-
-
-    
-
 class GraphEnv:
 
     def __init__(self, color):
@@ -150,7 +43,7 @@ class GraphEnv:
         tree = KDTree(self.centroids)
         num_out_of_gamut = 0
 
-        seed_centroid = tree.query(self.color, k=1)[1][0]
+        seed_centroid = self.centroids[tree.query(np.array(self.color).reshape(1, -1), k=1)[1][0][0]]
         diff = np.array(self.color) - np.array(seed_centroid)
         # breakpoint()
 
@@ -188,7 +81,7 @@ class GraphEnv:
 
                     # Find the nearest centroid to the point using KDTree
                     tree = KDTree(self.centroids)
-                    nearest_centroid = tree.query(point, k=1)[1][0]
+                    nearest_centroid = self.centroids[tree.query(np.array(point).reshape(1, -1), k=1)[1][0][0]]
 
                     if nearest_centroid[0] > 100:
                         breakpoint()
@@ -215,36 +108,36 @@ class GraphEnv:
         
         end = time.time()
         taken = end - start
-        print("Time to fit ramps in seconds: " + str(taken))
-        print("num ramps: " + str(len(self.fitted_ramps)))
-        print("num out of gamut: " + str(num_out_of_gamut))
+        # print("Time to fit ramps in seconds: " + str(taken))
+        # print("num ramps: " + str(len(self.fitted_ramps)))
+        # print("num out of gamut: " + str(num_out_of_gamut))
 
         # Visualize the states in 3D LAB space
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.mplot3d import Axes3D
+        # import matplotlib.pyplot as plt
+        # from mpl_toolkits.mplot3d import Axes3D
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
 
-        for ramp in self.fitted_ramps:
-            ramp = np.array(ramp)
-            ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
+        # for ramp in self.fitted_ramps:
+        #     ramp = np.array(ramp)
+        #     ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
 
-        # Display all nodes as scatter plot, in gray
-        print("Number of nodes:", len(self.graph.nodes))
+        # # Display all nodes as scatter plot, in gray
+        # print("Number of nodes:", len(self.graph.nodes))
 
-        print("Number of original colors:" , len(self.fitted_ramps * 9))
-        for node in self.graph.nodes:
-            # if not in any ramp
-            if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
-                ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
+        # print("Number of original colors:" , len(self.fitted_ramps * 9))
+        # for node in self.graph.nodes:
+        #     # if not in any ramp
+        #     if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
+        #         ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
         
-        # Label the axes
-        ax.set_xlabel('L')
-        ax.set_ylabel('A')
-        ax.set_zlabel('B')
+        # # Label the axes
+        # ax.set_xlabel('L')
+        # ax.set_ylabel('A')
+        # ax.set_zlabel('B')
 
-        plt.show()
+        # plt.show()
 
             
         # Add the ramp points to the graph, and edges between adjacent ramp points
@@ -271,10 +164,10 @@ class GraphEnv:
         dimensions = [(0,100), (-128,127), (-128,127)]
     
         # Initialize the Halton sampler
-        sampler = Halton(len(dimensions))
+        sampler = Halton(len(dimensions), optimization='lloyd', seed=4)
 
         # Generate samples
-        samples = sampler.random(10000)
+        samples = sampler.random(8074)
 
         # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
         samples = np.array([dimensions[i][0] + (dimensions[i][1] - dimensions[i][0]) * samples[:, i] for i in range(len(dimensions))]).T
@@ -284,7 +177,7 @@ class GraphEnv:
         for i in range(len(samples)):
             if self.in_gamut(*samples[i]):
                 points = np.append(points, [samples[i]], axis=0)
-        print("Number of points:", len(points))
+        # print("Number of points:", len(points))
         return points
 
     def in_gamut(self, l, a, b):
@@ -400,46 +293,22 @@ class Environment(GraphEnv):
 
     @property
     def reward(self):
-        # try:
-            # return -self.graph[self.state][self.next_state][self.weight]
-        # except:
-        #     breakpoint()
-        # rew = -0.01
         rew = 0
-        # if len(self.trajectory) > 2 and self.terminal(self.next_state):
-        #     max_accel_a = self.max_accel(self.trajectory, 1)
-        #     max_accel_b = self.max_accel(self.trajectory, 2)
-        #     rew += -0.5 * (max_accel_a + max_accel_b)
-        # if len(self.trajectory) > 2:
-        #     accel_a = self.accel(1)
-        #     accel_b = self.accel(2)
-        #     rew += -0.1 * (accel_a + accel_b)
-        # traj_len = len(self.trajectory)
-        # if traj_len > 2:
-        #     rew += -0.1 * traj_len
-
-        # if current state is the color
-        # if np.all(self.state == self.color):
-        #     rew += 10
-        #     print(rew)
-
         if self.terminal(self.next_state):
             rew += np.dot(self.reward_weights, self.feature_func(self.trajectory))
-            
         return rew
 
     @property
     def temporal_difference(self):
-        return self.reward + self.discount * self.utility(self.next_state) - self.state_action_value
+        return self.reward + self.discount * self.state_value(self.next_state) - self.state_action_value
 
     def terminal(self, state):
         if state is None:
             breakpoint()
         return len(self.state_actions[state]) == 0
 
-    def utility(self, state):
+    def state_value(self, state):
         if self.terminal(state):
-            # Dot product of reward weights and feature vector
             return 10
         else:
             return self.max_Q(state)[0]
