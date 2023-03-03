@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from cieran import Environment
+from coloraide import Color
 
 def draw_chart(cmap):
 
@@ -17,7 +18,8 @@ def draw_chart(cmap):
     
 if __name__ == "__main__":
 
-    env = Environment([48.325, -19.2993, -16.5717])
+    color = "#bb8bb0"
+    env = Environment(color = Color(color).convert('lab')._coords[:-1])
 
     # import pickle
     # with open('test.pkl', 'wb') as f:

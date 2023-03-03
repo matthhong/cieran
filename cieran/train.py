@@ -114,7 +114,7 @@ def train(env):
     print("Learning...")
 
     epsilon = 1.0
-    eps_decay_rate = 0.999
+    eps_decay_rate = 0.9995
     min_eps = 0.001
     for i in range(epochs):
         # Decay epsilon
