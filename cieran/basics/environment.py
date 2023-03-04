@@ -314,6 +314,7 @@ class Environment(GraphEnv):
     def reward(self):
         rew = 0
         if self.terminal(self.next_state):
+            rew += 10
             rew += np.dot(self.reward_weights, self.feature_func(self.trajectory))
         return rew
 
@@ -328,7 +329,7 @@ class Environment(GraphEnv):
 
     def state_value(self, state):
         if self.terminal(state):
-            return 10
+            return 0
         else:
             return self.max_Q(state)[0]
 

@@ -88,7 +88,7 @@ def query(env, render=None):
                                         
     query = WeakComparisonQuery(trajectory_set[:2], chart=render)
 
-    for query_no in range(20):
+    for query_no in range(12):
         queries, objective_values = query_optimizer.optimize('disagreement', belief, query)
         # queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
 
