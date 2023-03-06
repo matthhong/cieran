@@ -308,7 +308,7 @@ class Environment(GraphEnv):
 
     @property
     def state_action_value(self):
-        return self.Q.get((self.state, self.next_state), 0)
+        return self.Q[(self.state, self.next_state)]
 
     @property
     def reward(self):
@@ -337,8 +337,12 @@ class Environment(GraphEnv):
         # Find the maximum value in Q for a given (node, neighbor)
         max_q = -float('inf')
         max_neighbor = None
-        for neighbor in self.graph.neighbors(state):
-            q = self.Q.get((state, neighbor), 0)
+        neighbors = list(self.graph.neighbors(state))
+        # Shuffle neighbors in-place
+        random.shuffle(neighbors)
+
+        for neighbor in neighbors:
+            q = self.Q[(state, neighbor)]
             if q > max_q:
                 max_q = q
                 max_neighbor = neighbor
@@ -402,7 +406,7 @@ class Environment(GraphEnv):
     def softmax(self, state):
         # Choose a neighbor with a probability proportional to its Q value
         neighbors = self.state_actions[state]
-        q_values = [self.Q.get((state, neighbor), 0) for neighbor in neighbors]
+        q_values = [self.Q[(state, neighbor)] for neighbor in neighbors]
         probs = [np.exp(q) / sum(np.exp(q_values)) for q in q_values]
         return random.choices(neighbors, weights=probs)[0]
 
@@ -412,7 +416,7 @@ class Environment(GraphEnv):
         total_reward = 0
         while not self.terminal(self.state):
             self.choose_optimal_action(self.state)
-            total_reward += self.reward - 0.01
+            total_reward += self.reward
             self.set_state(self.next_state)
         return self.trajectory, total_reward
 
@@ -437,7 +441,7 @@ class Environment(GraphEnv):
 
 #             for a, b in self.graph.edges:
 #                 eligibility[(a,b)] = eligibility.get((a,b), 0) * self.decay * self.discount
-#                 self.Q[(a,b)] = self.Q.get((a,b), 0) + self.lr * self.temporal_difference * eligibility[(a,b)]
+#                 self.Q[(a,b)] = self.Q[(a,b), 0) + self.lr * self.temporal_difference * eligibility[(a,b)]
 
 #             self.state = self.next_state
 

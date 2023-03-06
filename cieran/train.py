@@ -88,7 +88,7 @@ def query(env, render=None):
                                         
     query = WeakComparisonQuery(trajectory_set[:2], chart=render)
 
-    for query_no in range(12):
+    for query_no in range(15):
         queries, objective_values = query_optimizer.optimize('disagreement', belief, query)
         # queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
 
@@ -113,13 +113,19 @@ def train(env):
     reward_history = []
     print("Learning...")
 
-    epsilon = 1.0
-    eps_decay_rate = 0.9995
-    min_eps = 0.001
+    # epsilon = 1.0
+    # eps_decay_rate = 0.9998
+    # min_eps = 0.001
+
+    lr = 1.0
+    lr_decay_rate = 0.9998
+    min_lr = 0.01
     for i in range(epochs):
         # Decay epsilon
-        epsilon = max(epsilon * eps_decay_rate, min_eps)
-        env.epsilon = epsilon
+        # epsilon = max(epsilon * eps_decay_rate, min_eps)
+        # env.epsilon = epsilon
+        lr = max(lr * lr_decay_rate, min_lr)
+        env.lr = lr
 
         env.run()
 
