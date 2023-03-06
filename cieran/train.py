@@ -108,7 +108,7 @@ def query(env, render=None):
     return env, best_traj
 
 def train(env):
-    epochs = 20000
+    epochs = 5000
     path_history = []
     reward_history = []
     print("Learning...")
@@ -118,7 +118,7 @@ def train(env):
     # min_eps = 0.001
 
     lr = 1.0
-    lr_decay_rate = 0.9998
+    lr_decay_rate = 0.9995
     min_lr = 0.01
     for i in range(epochs):
         # Decay epsilon
@@ -127,7 +127,7 @@ def train(env):
         lr = max(lr * lr_decay_rate, min_lr)
         env.lr = lr
 
-        env.run()
+        stochastic_reward = env.run()
 
         path, total_reward = env.get_best_path()
         path_history.append(path)
@@ -140,6 +140,7 @@ def train(env):
         #         break
 
         env.reset()
+
 
     return Trajectory(env, path_history[-1]), path_history, reward_history
 

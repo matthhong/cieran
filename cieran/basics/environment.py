@@ -286,10 +286,15 @@ class Environment(GraphEnv):
         self.reset()
 
     def run(self):
+        reward = 0
         while not self.terminal(self.state):
             self.choose_action(self.state)
-            self.Q[(self.state, self.next_state)] = self.state_action_value + self.lr * self.temporal_difference
+            self.trajectory.append(self.next_state)
+
+            self.Q[(self.state, self.action)] = self.state_action_value + self.lr * self.temporal_difference
+            reward += self.reward
             self.set_state(self.next_state)
+        return reward
 
     def random_walk(self):
         while not self.terminal(self.state):
@@ -303,12 +308,13 @@ class Environment(GraphEnv):
     def reset(self):
         self.state = self.source
         self.trajectory = [self.state]
+        self.action = None
         self.next_state = None
         self.total_reward = 0
 
     @property
     def state_action_value(self):
-        return self.Q[(self.state, self.next_state)]
+        return self.Q[(self.state, self.action)]
 
     @property
     def reward(self):
@@ -381,17 +387,19 @@ class Environment(GraphEnv):
         return max_accel/127
 
     def choose_action(self, state):
-        self.next_state = self.greedy_epsilon(state)
-        # self.next_state = self.softmax(state)
-        self.trajectory.append(self.next_state)
+        self.action = self.greedy_epsilon(state)
+
+        self.next_state = self.action
+        if random.random() <= 0.2: # Transition matrix
+            self.next_state = random.choice(self.state_actions[state])
 
     def choose_random_action(self, state):
-        self.next_state = random.choice(self.state_actions[state])
-        self.trajectory.append(self.next_state)
+        self.action = random.choice(self.state_actions[state])
+        self.next_state = self.action
 
     def choose_optimal_action(self, state):
-        self.next_state = self.max_Q(state)[1]
-        self.trajectory.append(self.next_state)
+        self.action = self.max_Q(state)[1]
+        self.next_state = self.action
 
     def greedy_epsilon(self, state):
         # Choose a random neighbor
@@ -416,6 +424,7 @@ class Environment(GraphEnv):
         total_reward = 0
         while not self.terminal(self.state):
             self.choose_optimal_action(self.state)
+            self.trajectory.append(self.next_state)
             total_reward += self.reward
             self.set_state(self.next_state)
         return self.trajectory, total_reward
