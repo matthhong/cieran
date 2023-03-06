@@ -118,8 +118,11 @@ def train(env):
     # min_eps = 0.001
 
     lr = 1.0
-    lr_decay_rate = 0.9995
+    lr_decay_rate = 0.999
     min_lr = 0.01
+
+    best_t = -1
+    best_reward = -99999
     for i in range(epochs):
         # Decay epsilon
         # epsilon = max(epsilon * eps_decay_rate, min_eps)
@@ -133,6 +136,10 @@ def train(env):
         path_history.append(path)
         reward_history.append(total_reward)
 
+        if total_reward > best_reward:
+            best_reward = total_reward
+            best_t = i
+
         # if i > 0 and i % 500 == 0:
         #     # Compare the reward of the current path to the reward of the path 499 epochs ago, and stop if they are the same
         #     if reward_history[-1] == reward_history[-500]:
@@ -142,5 +149,5 @@ def train(env):
         env.reset()
 
 
-    return Trajectory(env, path_history[-1]), path_history, reward_history
+    return Trajectory(env, path_history[best_t]), path_history, reward_history
 
