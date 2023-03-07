@@ -166,8 +166,11 @@ class GraphEnv:
         # Initialize the Halton sampler
         sampler = Halton(len(dimensions), optimization='lloyd', seed=4)
 
-        # Generate samples
-        samples = sampler.random(1973)
+        # # Generate samples (256)
+        # samples = sampler.random(1973)
+
+        # Generate samples (512)
+        samples = sampler.random(4074)
 
         # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
         samples = np.array([dimensions[i][0] + (dimensions[i][1] - dimensions[i][0]) * samples[:, i] for i in range(len(dimensions))]).T
