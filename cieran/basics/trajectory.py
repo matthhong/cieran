@@ -8,6 +8,10 @@ import networkx as nx
 from geomdl import fitting, operations
 from coloraide import Color
 
+from coloraide.interpolate.catmull_rom import CatmullRom
+
+# Color.register(CatmullRom())
+
 from matplotlib.colors import ListedColormap
 
 """Modules that are related to environment trajectories."""
@@ -38,6 +42,7 @@ class Trajectory:
         self.clip_path = clip_path
         self._ramp = None
         self.env = env
+        self._points = None
 
         self.features = None
         if env:
@@ -88,7 +93,7 @@ class Trajectory:
     def ramp(self):
         if self._ramp is None:
             controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
-            self._curve = Color.interpolate(controls, method='monotone')
+            self._curve = Color.interpolate(controls, method='bspline')
         
             t = np.linspace(0, 1, 256)
             at = np.linspace(0, 1, 256)
@@ -105,6 +110,7 @@ class Trajectory:
 
             # Invert the arc lengths to get the parameterization
             at_t = np.interp(at, arc_lengths, t)
+            self._points = [self._curve(index) for index in at_t]
 
             # Get the points from the ramp using the parameterization
             # points = self._curve.evaluate_list(at_t)
@@ -115,6 +121,106 @@ class Trajectory:
             self._ramp = ListedColormap(colors)
 
         return self._ramp
+    
+    def plot_all(self):
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+
+        fig = plt.figure(figsize=(15, 5))
+
+        # Create a 3x3 grid of subplots using GridSpec
+        gs = gridspec.GridSpec(3, 3,
+                            width_ratios=[1, 1, 1],
+                            height_ratios=[1, 1, 1]
+                            )
+
+        ax1 = fig.add_subplot(gs[0:, 0])
+
+        # Create 3 subplots stacked vertically in the second column
+        ax2 = fig.add_subplot(gs[0, 1])
+        ax3 = fig.add_subplot(gs[1, 1])
+        ax4 = fig.add_subplot(gs[2, 1])
+
+        ax5 = fig.add_subplot(gs[0:, 2])
+
+        fig.suptitle("Cieran's plot")
+
+        # Compute distances between each point in self.ramper.path and plot the distances with a line chart
+        distances = np.array([self.distance_lab(self._points[i], self._points[i-1]) for i in range(1, len(self._points))])
+        distances = len(distances) * distances
+        arclength = np.sum(distances)   
+        rmse = np.std(distances)
+        ax5.plot(distances)
+
+        ax5.set_title("Flatness of perceptual differences: %0.2f%%"
+                % (100 - (100 * rmse / arclength)))
+        ax5.set_xlabel("Point")
+        ax5.set_ylabel("Distance")
+
+        # Set y axes from 0 to max distance
+        ax5.set_ylim(0, max(distances)*2)
+        
+        # Plot the L* values ranging from 0 to 100
+        l_values = np.array([self._points[i][0] for i in range(0, len(self._points))])
+        ax2.plot(l_values)
+
+        ax2.set_title("L* values")
+        ax2.set_xlabel("Point")
+        ax2.set_ylabel("L* value")
+
+        # Set y axes from 0 to 100
+        ax2.set_ylim(0, 100)
+
+        a_values = np.array([self._points[i][1] for i in range(0, len(self._points))])
+        b_values = np.array([self._points[i][2] for i in range(0, len(self._points))])
+
+        # Convert a and b values to polar coordinates
+        c_values = np.sqrt(a_values**2 + b_values**2)
+        h_values = np.arctan2(b_values, a_values)
+
+        # Plot the c values ranging from 0 to 150
+        ax3.plot(c_values)
+
+        ax3.set_title("c* values")
+        ax3.set_xlabel("Point")
+        ax3.set_ylabel("c* value")
+
+        # Set y axes from -150 to 150
+        ax3.set_ylim(0, 150)
+
+        # Plot the h values
+        ax4.plot(h_values)
+
+        ax4.set_title("h* values")
+        ax4.set_xlabel("Point")
+        ax4.set_ylabel("h* value")
+
+        # Set y axes from  -pi to pi
+        ax4.set_ylim(-np.pi, np.pi)
+
+        # Plot the interpolated curve in matplotlib, projecting into 2D, showing only y and z
+        # obstacles in red
+
+        # waypoints in their color values in cielab
+        waypoints_proj = np.array(self.trajectory)[:, [1, 2]]
+        ax1.scatter(
+            *zip(*waypoints_proj), 
+            c=[Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3] for centroid in self.trajectory]
+        )
+
+        # path in green
+        path_proj = np.array(self._points)[:, [1, 2]]
+        ax1.plot(*zip(*path_proj), c='green')
+
+        ax1.set_title("Interpolated color ramp")
+        ax1.set_xlabel("a*")
+        ax1.set_ylabel("b*")
+
+        # Set x and y axes from -128 to 128
+        ax1.set_xlim(-100, 100) 
+        ax1.set_ylim(-100, 100)
+
+        plt.show()
 
     def lab_to_rgb(self, lab):
         # Convert a CIELAB value to an RGB value

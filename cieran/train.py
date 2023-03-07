@@ -108,7 +108,7 @@ def query(env, render=None):
     return env, best_traj
 
 def train(env):
-    epochs = 5000
+    epochs = 20000
     path_history = []
     reward_history = []
     print("Learning...")

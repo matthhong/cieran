@@ -53,58 +53,58 @@ class GraphEnv:
 
         num_out_of_gamut = 0
         for ramp in self.ramps:
-            translated_ramp = self.fit_ramp_to_color(ramp, self.color)  
+            translated_ramps = self.fit_ramp_to_color(ramp, self.color)
 
-            new_ramp = []
+            for translated_ramp in translated_ramps: 
+                new_ramp = []
 
-            out_of_gamut = False
-            # Check if every point in the ramp is in gamut
-            for point in translated_ramp:
-                if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
-                    out_of_gamut = True
-                    num_out_of_gamut += 1
+                out_of_gamut = False
+                # Check if every point in the ramp is in gamut
+                for point in translated_ramp:
+                    if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
+                        out_of_gamut = True
+                        num_out_of_gamut += 1
+                i = 0
+                while not out_of_gamut and i < len(translated_ramp):
+                    point = translated_ramp[i]
+                    i += 1
 
-            i = 0
-            while not out_of_gamut and i < len(translated_ramp):
-                point = translated_ramp[i]
-                i += 1
+                    if np.all(point == self.color):
+                        nearest_centroid = seed_centroid
+                    else:
 
-                if np.all(point == self.color):
-                    nearest_centroid = seed_centroid
-                else:
+                        # Check if the point is valid
+                        if point[0] > 100 or point[0] < 0:
+                            continue
+                        # round the point to the nearest integer
+                        # point = [custom_round(x) - diff[i] for i, x in enumerate(point)]
 
-                    # Check if the point is valid
-                    if point[0] > 100 or point[0] < 0:
-                        continue
-                    # round the point to the nearest integer
-                    # point = [custom_round(x) - diff[i] for i, x in enumerate(point)]
+                        # Find the nearest centroid to the point using KDTree
+                        tree = KDTree(self.centroids)
+                        nearest_centroid = self.centroids[tree.query(np.array(point).reshape(1, -1), k=1)[1][0][0]]
 
-                    # Find the nearest centroid to the point using KDTree
-                    tree = KDTree(self.centroids)
-                    nearest_centroid = self.centroids[tree.query(np.array(point).reshape(1, -1), k=1)[1][0][0]]
+                        if nearest_centroid[0] > 100:
+                            breakpoint()
+                    # if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
+                    #     if not out_of_gamut:
+                    #         num_out_of_gamut += 1
+                    #     out_of_gamut = True
+                    # self.graph.add_node(tuple(point))
+                    # if not out_of_gamut:
+                    # breakpoint()
+                    if len(new_ramp) > 0:
+                        # Compare the first element between the last centroid and the current centroid
+                        l_diff = new_ramp[-1][0] - nearest_centroid[0]
 
-                    if nearest_centroid[0] > 100:
-                        breakpoint()
-                # if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
-                #     if not out_of_gamut:
-                #         num_out_of_gamut += 1
-                #     out_of_gamut = True
-                # self.graph.add_node(tuple(point))
-                # if not out_of_gamut:
-                # breakpoint()
-                if len(new_ramp) > 0:
-                    # Compare the first element between the last centroid and the current centroid
-                    l_diff = new_ramp[-1][0] - nearest_centroid[0]
+                        if l_diff >= 0 and np.all(point == self.color):
+                            new_ramp.pop()
+                        elif l_diff >= 0:
+                            continue
 
-                    if l_diff >= 0 and np.all(point == self.color):
-                        new_ramp.pop()
-                    elif l_diff >= 0:
-                        continue
+                    new_ramp.append(nearest_centroid)
 
-                new_ramp.append(nearest_centroid)
-        
-            if not out_of_gamut:
-                self.fitted_ramps.append(new_ramp)
+                if not out_of_gamut:
+                    self.fitted_ramps.append(new_ramp)
         
         end = time.time()
         taken = end - start
@@ -167,7 +167,7 @@ class GraphEnv:
         sampler = Halton(len(dimensions), optimization='lloyd', seed=4)
 
         # Generate samples
-        samples = sampler.random(8074)
+        samples = sampler.random(1973)
 
         # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
         samples = np.array([dimensions[i][0] + (dimensions[i][1] - dimensions[i][0]) * samples[:, i] for i in range(len(dimensions))]).T
@@ -177,7 +177,7 @@ class GraphEnv:
         for i in range(len(samples)):
             if self.in_gamut(*samples[i]):
                 points = np.append(points, [samples[i]], axis=0)
-        # print("Number of points:", len(points))
+        print("Number of points:", len(points))
         return points
 
     def in_gamut(self, l, a, b):
@@ -240,9 +240,23 @@ class GraphEnv:
             difference_vector[i] = rotated_ramp[min_distance_index][i] - lab_color[i]
             new_start_color[i] = rotated_ramp[0][i] - difference_vector[i]
 
-        new_ramp = self.translate_curve(rotated_ramp, new_start_color)
+        new_ramp1 = self.translate_curve(rotated_ramp, new_start_color)
 
-        return new_ramp
+        # Compute the translation vector
+        translation = [0, 0, 0]
+        translation[0] = ramp[min_distance_index][0] - lab_color[0]
+        translation[1] = ramp[min_distance_index][1] - lab_color[1]
+        translation[2] = ramp[min_distance_index][2] - lab_color[2]
+
+        difference_vector = [0, 0, 0]
+        new_start_color = [0, 0, 0]
+        for i in range(3):
+            difference_vector[i] = ramp[min_distance_index][i] - lab_color[i]
+            new_start_color[i] = ramp[0][i] - difference_vector[i]
+
+        new_ramp2 = self.translate_curve(ramp, new_start_color)
+
+        return [new_ramp1, new_ramp2]
 
 
     def translate_curve(self, curve, starting_point):
@@ -318,7 +332,7 @@ class Environment(GraphEnv):
 
     @property
     def reward(self):
-        rew = 0
+        rew = -0.01
         if self.terminal(self.next_state):
             rew += 10
             rew += np.dot(self.reward_weights, self.feature_func(self.trajectory))

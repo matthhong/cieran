@@ -142,15 +142,15 @@ class WeakComparisonQuery(Query):
             plot_widget2 = widgets.Output()
 
             with plot_widget1:
-                self.chart(ramp1)
+                self.slate[0].plot_all()
 
             with plot_widget2:
-                self.chart(ramp2)
+                self.slate[1].plot_all()
 
             box_layout = widgets.Layout(display='flex',
-                            flex_flow='row',
+                            flex_flow='column',
                             justify_content='space-around')
-            plots_hbox = widgets.HBox([plot_widget1, plot_widget2], layout=box_layout)
+            plots_hbox = widgets.VBox([plot_widget1, plot_widget2], layout=box_layout)
 
             display(out)
             with out:
