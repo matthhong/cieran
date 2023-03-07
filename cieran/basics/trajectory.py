@@ -16,6 +16,16 @@ from matplotlib.colors import ListedColormap
 
 """Modules that are related to environment trajectories."""
 
+t = np.linspace(0, 2 * np.pi, 1024)
+data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
+
+def default_chart(cmap):
+   
+    fig, ax = plt.subplots()
+    ax.imshow(data2d, cmap=cmap)
+
+    plt.show()
+
 class Trajectory:
     """
     A class for keeping trajectories that consist of a sequence of state-action pairs,
@@ -35,7 +45,7 @@ class Trajectory:
         features (numpy.array): Features of the trajectory.
         clip_path (str): The path to the video clip that keeps the visualization of the trajectory.
     """
-    def __init__(self, env, trajectory: List[np.array], clip_path: str = None):
+    def __init__(self, env, trajectory: List[np.array], clip_path: str = None, draw=None):
         # Remove first and last points of trajectory
         self.trajectory = trajectory
         self._curve = None
@@ -43,6 +53,7 @@ class Trajectory:
         self._ramp = None
         self.env = env
         self._points = None
+        self._draw = draw
 
         self.features = None
         if env:
@@ -59,35 +70,11 @@ class Trajectory:
         """The length of the trajectory, i.e., the number of time steps in the trajectory."""
         return len(self.trajectory)
         
-    def visualize(self):
-        """
-        Visualizes the trajectory with a video if the clip exists. Otherwise, prints the trajectory information.
-        
-        :Note: FPS is fixed at 25 for video visualizations.
-        """
-
-    # def get_curve(self, num_points):
-    #     t = np.linspace(0, 1, num_points)
-    #     at = np.linspace(0, 1, num_points)
-    #     points = self._curve.evaluate_list(at)    
-    #     return points
-
-    # def interpolate(self):
-    #     # Interpolate the ramp
-    #     # try:
-    #     #     if len(self.trajectory) > 3:
-    #     #         self._curve = fitting.interpolate_curve(self.trajectory, 3, centripetal=True)
-    #     #     elif len(self.trajectory) == 3:
-    #     #         self._curve = fitting.interpolate_curve(self.trajectory, 2, centripetal=True)
-    #     #     else:
-    #     #         self._curve = fitting.interpolate_curve(self.trajectory, 1, centripetal=True)
-    #     # except:
-    #     #     breakpoint()
-    #     try:
-    #         controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
-    #         self._curve = Color.interpolate(controls, method='monotone')
-    #     except:
-    #         pass
+    def draw(self):
+        if self._draw:
+            self._draw(self.ramp)
+        else:
+            default_chart(self.ramp)
 
     @property
     def ramp(self):
@@ -274,3 +261,10 @@ class TrajectorySet:
             self.features_matrix = new_trajectory.features.reshape((1,-1))
         else:
             self.features_matrix = np.vstack((self.features_matrix, new_trajectory.features))
+
+    def display(self, shuffle=True):
+        # Create two columns with jupyter widgets, where the first coulmn contains four rows
+        # and the second column contwins two rows, the first row taking up 1/4 of the second column,
+        # and the second row taking up 3/4 of the second column
+
+        pass

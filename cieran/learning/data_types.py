@@ -137,6 +137,7 @@ class WeakComparisonQuery(Query):
             self.chart = default_chart
 
         out = widgets.Output()
+        # out = widgets.Output(layout={'border': '1px solid black'})
 
         plot_widget1 = widgets.Output()
         plot_widget2 = widgets.Output()
@@ -151,6 +152,7 @@ class WeakComparisonQuery(Query):
 
         box_layout = widgets.Layout(display='flex',
                         # flex_flow='column',
+
                         flex_flow='row',
                         justify_content='space-around')
         plots_hbox = widgets.VBox([plot_widget1, plot_widget2], layout=box_layout)
@@ -168,10 +170,12 @@ class WeakComparisonQuery(Query):
 
         selection = None
         while selection is None:
-            selection = input('Which trajectory is the best? Enter a number (0 for "About Equal"): ')
+            selection = input('Which is better for a paper figure? Enter a number (1 left, 2 right, 0 about equal): ')
             selection = str(int(selection) - 1)
             if not isinteger(selection) or int(selection) not in self.response_set:
                 selection = None
+
+                
         clear_output()
         return int(selection)
 

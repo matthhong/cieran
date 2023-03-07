@@ -23,7 +23,7 @@ from collections import defaultdict
 import numpy as np
 
 import ipywidgets as widgets
-from IPython.display import display
+from IPython.display import display, clear_output
 
 # define the colors you want to use
 colors = []
@@ -105,6 +105,7 @@ class Cieran:
         self.search_result = None
 
     def _tableau10(self):
+        clear_output()
         # import color ramps
         with open(COLOR_FILE, 'r') as f:
             for line in f:
@@ -119,11 +120,10 @@ class Cieran:
         display(out)
 
         def on_button_clicked(b):
-            with out:
-                # out.clear_output()
-                # destroy buttons
-                buttons = []
-                self.set_color(b.style.button_color)
+            # clear_output()
+            # destroy buttons
+            # buttons = []
+            self.set_color(b.style.button_color)
 
         # create a loop to generate the buttons
         for color in colors:
@@ -135,7 +135,8 @@ class Cieran:
 
         # create a grid box to display the buttons
         grid = widgets.GridBox(buttons, layout=widgets.Layout(grid_template_columns='repeat(10, 30px)',
-                                                            grid_template_rows='repeat(1, 32px)'))
+                                                            grid_template_rows='repeat(1, 32px)',
+                                                            margin='8px'))
         # display the grid box
         with out:
             display(grid)
@@ -145,8 +146,9 @@ class Cieran:
         true_user = HumanUser(delay=0.5)
 
         # Visualize epochs as a progress bar
-        bar = widgets.IntProgress(min=0, max=n_queries)
+        bar = widgets.IntProgress(min=0, max=n_queries, layout=widgets.Layout(width='auto', height='36px', margin='8px'))
         bar.style.bar_color = 'black'
+        # bar.style.margin = '8px'
 
         for query_no in range(n_queries):
             bar.value = query_no
@@ -174,7 +176,7 @@ class Cieran:
         self.reward_history = []
         
         # Visualize epochs as a progress bar
-        bar = widgets.IntProgress(min=0, max=epochs)
+        bar = widgets.IntProgress(min=0, max=epochs, layout=widgets.Layout(width='auto', height='36px', margin='8px'))
         display(bar)
 
         self._env.discount= 1
@@ -189,7 +191,8 @@ class Cieran:
         best_reward = -99999
         best_path = None
         for i in range(epochs):
-            bar.value = i
+            if i % 100 == 0:
+                bar.value = i
 
             self._env.lr = max(self._env.lr * lr_decay_rate, min_lr)
 
@@ -206,19 +209,22 @@ class Cieran:
 
         self.search_result = Trajectory(self._env, best_path)
 
+    def results(self, N=4):
 
-class Result:
-    pass
+        # top = np.argmax(self._user_model.reward(self.trajectories)).item()
+        # Get top N trajectories
+        top_n = np.argpartition(self._user_model.reward(self.trajectories), -N)[-N:]
 
-def draw_chart(cmap):
+        results = TrajectorySet()
 
-    t = np.linspace(0, 2 * np.pi, 1024)
-    data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
-    # Draw a chart of data2d with the given colormap
-    fig, ax = plt.subplots()
-    ax.imshow(data2d, cmap=cmap)
+        if self.search_result is not None:
+            results.append(self.search_result)
 
-    plt.show()
+        for i in top_n:
+            results.append(self.trajectories[i])
+
+        return results
+
 
 
 
