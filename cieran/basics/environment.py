@@ -48,8 +48,8 @@ class GraphEnv:
         # breakpoint()
 
         #time this
-        import time
-        start = time.time()
+        # import time
+        # start = time.time()
 
         num_out_of_gamut = 0
         for ramp in self.ramps:
@@ -106,38 +106,38 @@ class GraphEnv:
                 if not out_of_gamut:
                     self.fitted_ramps.append(new_ramp)
         
-        end = time.time()
-        taken = end - start
+        # end = time.time()
+        # taken = end - start
         # print("Time to fit ramps in seconds: " + str(taken))
         # print("num ramps: " + str(len(self.fitted_ramps)))
         # print("num out of gamut: " + str(num_out_of_gamut))
 
         #Visualize the states in 3D LAB space
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.mplot3d import Axes3D
+        # import matplotlib.pyplot as plt
+        # from mpl_toolkits.mplot3d import Axes3D
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
 
-        for ramp in self.fitted_ramps:
-            ramp = np.array(ramp)
-            ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
+        # for ramp in self.fitted_ramps:
+        #     ramp = np.array(ramp)
+        #     ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
 
-        # Display all nodes as scatter plot, in gray
-        print("Number of nodes:", len(self.graph.nodes))
+        # # Display all nodes as scatter plot, in gray
+        # print("Number of nodes:", len(self.graph.nodes))
 
-        print("Number of original colors:" , len(self.fitted_ramps * 9))
-        for node in self.graph.nodes:
-            # if not in any ramp
-            if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
-                ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
+        # print("Number of original colors:" , len(self.fitted_ramps * 9))
+        # for node in self.graph.nodes:
+        #     # if not in any ramp
+        #     if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
+        #         ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
         
-        # Label the axes
-        ax.set_xlabel('L')
-        ax.set_ylabel('A')
-        ax.set_zlabel('B')
+        # # Label the axes
+        # ax.set_xlabel('L')
+        # ax.set_ylabel('A')
+        # ax.set_zlabel('B')
 
-        plt.show()
+        # plt.show()
 
             
         # Add the ramp points to the graph, and edges between adjacent ramp points
@@ -180,7 +180,7 @@ class GraphEnv:
         for i in range(len(samples)):
             if self.in_gamut(*samples[i]):
                 points = np.append(points, [samples[i]], axis=0)
-        print("Number of points:", len(points))
+        # print("Number of points:", len(points))
         return points
 
     def in_gamut(self, l, a, b):

@@ -132,36 +132,39 @@ class WeakComparisonQuery(Query):
         ramp1 = self.slate[0].ramp
         ramp2 = self.slate[1].ramp
 
-        if is_notebook():
-            if self.chart is None:
-                self.chart = default_chart
+        # if is_notebook():
+        if self.chart is None:
+            self.chart = default_chart
 
-            out = widgets.Output()
+        out = widgets.Output()
 
-            plot_widget1 = widgets.Output()
-            plot_widget2 = widgets.Output()
+        plot_widget1 = widgets.Output()
+        plot_widget2 = widgets.Output()
 
-            with plot_widget1:
-                self.slate[0].plot_all()
+        with plot_widget1:
+            # self.slate[0].plot_all()
+            self.chart(ramp1)
 
-            with plot_widget2:
-                self.slate[1].plot_all()
+        with plot_widget2:
+            # self.slate[1].plot_all()
+            self.chart(ramp2)
 
-            box_layout = widgets.Layout(display='flex',
-                            flex_flow='column',
-                            justify_content='space-around')
-            plots_hbox = widgets.VBox([plot_widget1, plot_widget2], layout=box_layout)
+        box_layout = widgets.Layout(display='flex',
+                        # flex_flow='column',
+                        flex_flow='row',
+                        justify_content='space-around')
+        plots_hbox = widgets.VBox([plot_widget1, plot_widget2], layout=box_layout)
 
-            display(out)
-            with out:
-                display(plots_hbox)
+        display(out)
+        with out:
+            display(plots_hbox)
         
-        else:
-            fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-            im1=ax[0].imshow(data2d, cmap=ramp1)
-            im2=ax[1].imshow(data2d, cmap=ramp2)
+        # else:
+        #     fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        #     im1=ax[0].imshow(data2d, cmap=ramp1)
+        #     im2=ax[1].imshow(data2d, cmap=ramp2)
 
-            plt.show()
+        #     plt.show()
 
         selection = None
         while selection is None:

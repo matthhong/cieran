@@ -45,7 +45,7 @@ class QueryOptimizerDiscreteTrajectorySet(QueryOptimizer):
             defines the possible set of trajectories that may show up in the optimized query.
     """
     def __init__(self, trajectory_set: TrajectorySet):
-        super(QueryOptimizerDiscreteTrajectorySet, self).__init__()
+        super().__init__()
         self.trajectory_set = trajectory_set
         
     def argplanner(self, user: User) -> int:

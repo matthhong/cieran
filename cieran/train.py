@@ -18,136 +18,208 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 from coloraide import Color
 
+from collections import defaultdict
+
 import numpy as np
 
+import ipywidgets as widgets
+from IPython.display import display
+
+# define the colors you want to use
+colors = []
+
+COLOR_FILE = 'hex_values.txt'
 
 
-def initialize(color):
-    if isinstance(color, str):
-        color = Color(color).convert('lab')._coords[:-1]
-    env = Environment(color, feature_func=feature_func)
-    return env
+from coloraide import Color
 
 
-def visualize_path(ramp):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+def initialize_color(button):
+    global env
+    env = cieran.initialize(button.style.button_color)
 
-    ramp = np.array(ramp)
-    ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
-    
-    # Label the axes
-    ax.set_xlabel('L')
-    ax.set_ylabel('A')
-    ax.set_zlabel('B')
+def tableau10():
+    # import color ramps
+    with open(COLOR_FILE, 'r') as f:
+        for line in f:
+            # Remove the newline character
+            line = line.strip()
+            colors.append(line)
 
-    # Set the limits of the axes
-    ax.set_xlim(0, 100)
-    ax.set_ylim(-127, 127)
-    ax.set_zlim(-127, 127)
+    # create a list to store the buttons
+    buttons = []
 
-    # Give the plot a title
-    title = ax.text(0.5, 1.05, 'Cieran', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+    # create a loop to generate the buttons
+    for color in colors:
+        button = widgets.Button(description='', layout=widgets.Layout(width='30px', height='30px'))
+        button.style.button_color = color
+        # Initialize the environment with the color on click
+        button.on_click(initialize_color)
+        buttons.append(button)
+
+    # create a grid box to display the buttons
+    grid = widgets.GridBox(buttons, layout=widgets.Layout(grid_template_columns='repeat(10, 30px)',
+                                                        grid_template_rows='repeat(1, 30px)'))
+
+    # display the grid box
+    display(grid)
+
+
+class Cieran:
+    def __init__(self, draw, color=None, palette=None):
+            
+        self.draw = draw
+        self.search_result = None
+
+        self._env = None
+        self._trajectories = None
+        self._query_optimizer = None
+        self._user_model = None
+        self._belief = None
+        self._query = None
+
+        if palette == 'tableau10':
+            self._tableau10()
+
+    def set_color(self, color):
+        if isinstance(color, str):
+            color = Color(color).convert('lab')._coords[:-1]
+
+        self._env = Environment(color, feature_func=feature_func)
+
+        self._trajectories = TrajectorySet([])
+        for traj in self._env.fitted_ramps:
+            self._trajectories.append(Trajectory(self._env, traj))
+        features_dim = len(self._trajectories[0].features)
+
+        self._query_optimizer = QueryOptimizerDiscreteTrajectorySet(self._trajectories)
+
+        params = {'weights': util_functions.get_random_normalized_vector(features_dim)}
+        self._env.reward_weights = params['weights']
+
+        self._user_model = SoftmaxUser(params)
+        self._belief = SamplingBasedBelief(self._user_model, [], params)
+        # print('Estimated user parameters: ' + str(belief.mean))
+                                            
+        self._query = WeakComparisonQuery(self._trajectories[:2], chart=self.draw)
+        self.search_result = None
+
+    def _tableau10(self):
+        # import color ramps
+        with open(COLOR_FILE, 'r') as f:
+            for line in f:
+                # Remove the newline character
+                line = line.strip()
+                colors.append(line)
+
+        # create a list to store the buttons
+        buttons = []
+
+        out = widgets.Output()
+        display(out)
+
+        def on_button_clicked(b):
+            with out:
+                # out.clear_output()
+                # destroy buttons
+                buttons = []
+                self.set_color(b.style.button_color)
+
+        # create a loop to generate the buttons
+        for color in colors:
+            button = widgets.Button(description='', layout=widgets.Layout(width='30px', height='30px'))
+            button.style.button_color = color
+            # Initialize the environment with the color on click
+            button.on_click(on_button_clicked)
+            buttons.append(button)
+
+        # create a grid box to display the buttons
+        grid = widgets.GridBox(buttons, layout=widgets.Layout(grid_template_columns='repeat(10, 30px)',
+                                                            grid_template_rows='repeat(1, 32px)'))
+        # display the grid box
+        with out:
+            display(grid)
+
+
+    def teach(self, n_queries=15):
+        true_user = HumanUser(delay=0.5)
+
+        # Visualize epochs as a progress bar
+        bar = widgets.IntProgress(min=0, max=n_queries)
+        bar.style.bar_color = 'black'
+
+        for query_no in range(n_queries):
+            bar.value = query_no
+            display(bar)
+
+            queries, objective_values = self._query_optimizer.optimize('disagreement', self._belief, self._query)
+
+            # print('Trajectory 1: ' + str(queries[0].slate[0].features))
+            # print('Trajectory 2: ' + str(queries[0].slate[1].features))
+
+            # print('Objective Value: ' + str(objective_values[0]))
+            
+            responses = true_user.respond(queries[0])
+            self._belief.update(WeakComparison(queries[0], responses[0]))
+            self._env.reward_weights = self._belief.mean['weights']
+            # print('Estimated user parameters: ' + str(self._belief.mean))
+
+        # best_traj = self._query_optimizer.planner(self._user_model)
+
+
+    def search(self, weights=None, epochs=20000):
+        if weights is None:
+            weights = self._env.reward_weights
+
+        self.reward_history = []
+        
+        # Visualize epochs as a progress bar
+        bar = widgets.IntProgress(min=0, max=epochs)
+        display(bar)
+
+        self._env.discount= 1
+        self._env.lr = 1
+        self._env.Q = defaultdict(float)
+        self._env.epsilon = 0.0
+        self._env.Q.default_factory = lambda: 100.0
+
+        lr_decay_rate = 0.999
+        min_lr = 0.01
+
+        best_reward = -99999
+        best_path = None
+        for i in range(epochs):
+            bar.value = i
+
+            self._env.lr = max(self._env.lr * lr_decay_rate, min_lr)
+
+            _ = self._env.run()
+
+            path, total_reward = self._env.get_best_path()
+            self.reward_history.append(total_reward)
+
+            if total_reward > best_reward:
+                best_reward = total_reward
+                best_path = path
+
+            self._env.reset()
+
+        self.search_result = Trajectory(self._env, best_path)
+
+
+class Result:
+    pass
+
+def draw_chart(cmap):
+
+    t = np.linspace(0, 2 * np.pi, 1024)
+    data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
+    # Draw a chart of data2d with the given colormap
+    fig, ax = plt.subplots()
+    ax.imshow(data2d, cmap=cmap)
 
     plt.show()
 
-def load_environment(color):
-    # Load environment from pickle file
-    with open(str(color) + '.pkl', 'rb') as f:
-        env = pickle.load(f)
-
-    return env
-
-def query(env, render=None):
-    # Need to be able to capture hexcode, lab, rgb, or cmyk
-
-    # TODO: Maybe we can just precompute the trajectories and save them to a file by using some gray color as a
-
-    # Save environment as a pickle file
-    
-
-    # with open(str(color) + '.pkl', 'wb') as f:
-    #     pickle.dump(env, f)
-
-    # Generate trajectories here as opposed to the above
-    # trajectory_set = generate_trajectories_randomly(env, num_trajectories=100, max_episode_length=300, file_name='Cieran', seed=0)
-    trajectory_set = TrajectorySet([])
-    for traj in env.fitted_ramps:
-        trajectory_set.append(Trajectory(env, traj))
-    features_dim = len(trajectory_set[0].features)
-
-    query_optimizer = QueryOptimizerDiscreteTrajectorySet(trajectory_set)
-
-    true_user = HumanUser(delay=0.5)
-
-    params = {'weights': util_functions.get_random_normalized_vector(features_dim)}
-    # params = {'weights': [-1.0] * features_dim}
-    user_model = SoftmaxUser(params)
-    belief = SamplingBasedBelief(user_model, [], params)
-    print('Estimated user parameters: ' + str(belief.mean))
-                                        
-    query = WeakComparisonQuery(trajectory_set[:2], chart=render)
-
-    for query_no in range(15):
-        queries, objective_values = query_optimizer.optimize('disagreement', belief, query)
-        # queries, objective_values = query_optimizer.optimize('disagreement', belief, query, optimization_method='medoids', batch_size=6)
-
-        # Print trajectory features for each query
-        print('Trajectory 1: ' + str(queries[0].slate[0].features))
-        print('Trajectory 2: ' + str(queries[0].slate[1].features))
-
-        print('Objective Value: ' + str(objective_values[0]))
-        
-        responses = true_user.respond(queries[0])
-        belief.update(WeakComparison(queries[0], responses[0]))
-        print('Estimated user parameters: ' + str(belief.mean))
-
-    env.reward_weights = belief.mean['weights']
-    best_traj = query_optimizer.planner(user_model)
-
-    return env, best_traj
-
-def train(env):
-    epochs = 20000
-    path_history = []
-    reward_history = []
-    print("Learning...")
-
-    # epsilon = 1.0
-    # eps_decay_rate = 0.9998
-    # min_eps = 0.001
-
-    lr = 1.0
-    lr_decay_rate = 0.999
-    min_lr = 0.01
-
-    best_t = -1
-    best_reward = -99999
-    for i in range(epochs):
-        # Decay epsilon
-        # epsilon = max(epsilon * eps_decay_rate, min_eps)
-        # env.epsilon = epsilon
-        lr = max(lr * lr_decay_rate, min_lr)
-        env.lr = lr
-
-        stochastic_reward = env.run()
-
-        path, total_reward = env.get_best_path()
-        path_history.append(path)
-        reward_history.append(total_reward)
-
-        if total_reward > best_reward:
-            best_reward = total_reward
-            best_t = i
-
-        # if i > 0 and i % 500 == 0:
-        #     # Compare the reward of the current path to the reward of the path 499 epochs ago, and stop if they are the same
-        #     if reward_history[-1] == reward_history[-500]:
-        #         print("Converged at epoch " + str(i))
-        #         break
-
-        env.reset()
 
 
-    return Trajectory(env, path_history[best_t]), path_history, reward_history
 
