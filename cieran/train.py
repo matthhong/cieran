@@ -146,7 +146,7 @@ class Cieran:
         true_user = HumanUser(delay=0.5)
 
         # Visualize epochs as a progress bar
-        bar = widgets.IntProgress(min=0, max=n_queries, layout=widgets.Layout(width='auto', height='36px', margin='8px'))
+        bar = widgets.IntProgress(min=0, max=n_queries-1, layout=widgets.Layout(width='auto', height='36px', margin='8px'))
         bar.style.bar_color = 'black'
         # bar.style.margin = '8px'
 
@@ -191,7 +191,7 @@ class Cieran:
         best_reward = -99999
         best_path = None
         for i in range(epochs):
-            if i % 100 == 0:
+            if i % 100 == 99:
                 bar.value = i
 
             self._env.lr = max(self._env.lr * lr_decay_rate, min_lr)
