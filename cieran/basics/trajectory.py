@@ -101,8 +101,8 @@ class Trajectory:
 
             # Get the points from the ramp using the parameterization
             # points = self._curve.evaluate_list(at_t)
-            # colors = [self.lab_to_rgb(p).to_string(hex=True) for p in points]
-            colors = [self._curve(index).convert('srgb').to_string(hex=True) for index in at_t]
+            colors = [p.convert('srgb').to_string(hex=True) for p in self._points]
+            # colors = [self._curve(index).convert('srgb').to_string(hex=True) for index in at_t]
 
             # convert to ListedColormap
             self._ramp = ListedColormap(colors)
