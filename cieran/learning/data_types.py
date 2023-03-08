@@ -175,8 +175,8 @@ class WeakComparisonQuery(Query):
             if not isinteger(selection) or int(selection) not in self.response_set:
                 selection = None
 
-                
         clear_output()
+
         return int(selection)
 
 

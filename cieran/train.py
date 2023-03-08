@@ -34,10 +34,17 @@ from coloraide import Color
 
 
 class Cieran:
-    def __init__(self, draw, color=None, palette=None):
+    def __init__(self, draw, color=None):
             
         self.draw = draw
         self._search_result = None
+
+        self.lab_color = None
+        self.hex_color = None
+        if color == 'tableau10':
+            self._tableau10()
+        elif color is not None:
+            self.set_color(color)
 
         self._env = None
         self._trajectories = None
@@ -51,14 +58,15 @@ class Cieran:
             'choice': None
         }
 
-        if palette == 'tableau10':
-            self._tableau10()
-
     def set_color(self, color):
         if isinstance(color, str):
-            color = Color(color).convert('lab')._coords[:-1]
+            self.color = Color(color).convert('lab')._coords[:-1]
+            self.hex_color = color
+        elif isinstance(color, list) or isinstance(color, np.ndarray):
+            self.color = color
+            self.hex_color = Color(color).convert('srgb').to_string(hex=True)
 
-        self._env = Environment(color, feature_func=feature_func)
+        self._env = Environment(self.color, feature_func=feature_func)
 
         self._trajectories = TrajectorySet([])
         for traj in self._env.fitted_ramps:
@@ -128,7 +136,7 @@ class Cieran:
 
         # Visualize epochs as a progress bar
         bar = widgets.IntProgress(min=0, max=n_queries-1, layout=widgets.Layout(width='auto', height='36px', margin='8px'))
-        bar.style.bar_color = 'black'
+        bar.style.bar_color = self.hex_color
         # bar.style.margin = '8px'
 
         for query_no in range(n_queries):
@@ -146,6 +154,9 @@ class Cieran:
             self._belief.update(WeakComparison(queries[0], responses[0]))
             self._env.set_reward_weights(self._belief.mean['weights'])
             # print('Estimated user parameters: ' + str(self._belief.mean))
+        
+        bar.value = query_no
+        display(bar)
 
         self._ranker()
 
@@ -159,6 +170,7 @@ class Cieran:
         
         # Visualize epochs as a progress bar
         bar = widgets.IntProgress(min=0, max=epochs, layout=widgets.Layout(width='auto', height='36px', margin='8px'))
+        bar.style.bar_color = self.hex_color
         display(bar)
 
         self._env.discount= 1
