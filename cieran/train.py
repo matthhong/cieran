@@ -182,10 +182,10 @@ class Cieran:
         self._env.discount= 1
         self._env.lr = 1
         self._env.Q = defaultdict(float)
-        self._env.epsilon = 0.0
+        self._env.epsilon = 0.1
         self._env.Q.default_factory = lambda: 100.0
 
-        lr_decay_rate = 0.999
+        lr_decay_rate = 0.9995
         min_lr = 0.01
 
         best_reward = -99999
@@ -199,7 +199,7 @@ class Cieran:
             _ = self._env.run()
 
             path, total_reward = self._env.get_best_path()
-            self.reward_history.append(total_reward)
+            self.reward_history.append(_)
 
             if total_reward > best_reward:
                 best_reward = total_reward

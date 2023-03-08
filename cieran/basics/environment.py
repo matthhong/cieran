@@ -407,7 +407,7 @@ class Environment(GraphEnv):
         self.action = self.greedy_epsilon(state)
 
         self.next_state = self.action
-        if random.random() <= 0.2: # Transition matrix
+        if random.random() <= 0.05: # Transition matrix
             self.next_state = random.choice(self.state_actions[state])
 
     def choose_random_action(self, state):
