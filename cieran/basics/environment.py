@@ -297,10 +297,9 @@ class Environment(GraphEnv):
 
         self.lr = 0.1
         self.discount = 0.9
-        self.reward_weights = np.array([-1,-1,-1])
         self.feature_func = feature_func
-        self.best_policy = None
-        self.best_reward = float("-inf")
+        
+        self.set_reward_weights(None)
 
         self.reset()
 
@@ -335,6 +334,11 @@ class Environment(GraphEnv):
         self.action = None
         self.next_state = None
         self.total_reward = 0
+
+    def set_reward_weights(self, weights):
+        self.reward_weights = weights
+        self.best_policy = None
+        self.best_reward = float("-inf")
 
     @property
     def state_action_value(self):

@@ -69,7 +69,7 @@ class Cieran:
     def __init__(self, draw, color=None, palette=None):
             
         self.draw = draw
-        self.search_result = None
+        self._search_result = None
 
         self._env = None
         self._trajectories = None
@@ -77,6 +77,7 @@ class Cieran:
         self._user_model = None
         self._belief = None
         self._query = None
+        self._ranked_results = None
 
         if palette == 'tableau10':
             self._tableau10()
@@ -102,7 +103,7 @@ class Cieran:
         # print('Estimated user parameters: ' + str(belief.mean))
                                             
         self._query = WeakComparisonQuery(self._trajectories[:2], chart=self.draw)
-        self.search_result = None
+        self._search_result = None
 
     def _tableau10(self):
         clear_output()
@@ -141,6 +142,14 @@ class Cieran:
         with out:
             display(grid)
 
+    def _ranker(self):
+        ranked = np.argsort(self._user_model.reward(self._trajectories))[::-1]
+        results = TrajectorySet([])
+
+        for i in ranked:
+            results.append(self._trajectories.trajectories[i])
+
+        self._ranked_results = results
 
     def teach(self, n_queries=15):
         true_user = HumanUser(delay=0.5)
@@ -163,15 +172,16 @@ class Cieran:
             
             responses = true_user.respond(queries[0])
             self._belief.update(WeakComparison(queries[0], responses[0]))
-            self._env.reward_weights = self._belief.mean['weights']
+            self._env.set_reward_weights(self._belief.mean['weights'])
             # print('Estimated user parameters: ' + str(self._belief.mean))
+
+        self._ranker()
 
         # best_traj = self._query_optimizer.planner(self._user_model)
 
-
     def search(self, weights=None, epochs=20000):
-        if weights is None:
-            weights = self._env.reward_weights
+        if weights is not None:
+            self._env.set_reward_weights(weights)
 
         self.reward_history = []
         
@@ -209,23 +219,37 @@ class Cieran:
 
             self._env.reset()
 
-        self.search_result = Trajectory(self._env, best_path)
+        self._search_result = Trajectory(self._env, best_path)
 
-    def results(self, N=4):
+    def search_result(self):
+        if self._search_result is not None:
+            return self._search_result.ramp
 
-        # top = np.argmax(self._user_model.reward(self.trajectories)).item()
-        # Get top N trajectories
-        top_n = np.argpartition(self._user_model.reward(self.trajectories), -N)[-N:]
+    def ranked_results(self, N=4):
+        if self._ranked_results is not None:
+            ramps = []
+            for i in range(N):
+                ramps.append(self._ranked_results[i].ramp)
+            return ramps
+        
+    @property
+    def options_display(self, shuffle=True):
+        import ipywidgets as widgets
+        results = [self.search_result()] + self.ranked_results(3)
 
-        results = TrajectorySet()
+        if shuffle:
+            np.random.shuffle(results)
 
-        if self.search_result is not None:
-            results.append(self.search_result)
+        outputs = []
+        for i, result in enumerate(results):
+            output = widgets.Output()
+            outputs.append(output)
+            with output:
+                self.draw(result)
 
-        for i in top_n:
-            results.append(self.trajectories[i])
-
-        return results
+        # Make a gridbox
+        grid = widgets.GridBox(children=outputs, layout=widgets.Layout(grid_template_columns="repeat(2, 50%)"))
+        display(grid)
 
 
 

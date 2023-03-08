@@ -109,6 +109,26 @@ class Trajectory:
 
         return self._ramp
     
+    @property
+    def in_gamut(self):
+        if self._curve is None:
+            controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
+            self._curve = Color.interpolate(controls, method='bspline')
+
+        t = np.linspace(0, 1, 256)
+        at = np.linspace(0, 1, 256)
+        # points = self._curve.evaluate_list(at)
+        points = [self._curve(index) for index in at]
+
+        in_gamut = True
+        for point in points:
+            color = Color("lab({}% {} {} / 1)".format(*point))
+            if not color.in_gamut('srgb'):
+                # print("Out of gamut: {}".format(color))
+                in_gamut = False
+                break
+        return in_gamut
+    
     def plot_all(self):
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
