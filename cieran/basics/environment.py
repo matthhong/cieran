@@ -299,19 +299,26 @@ class Environment(GraphEnv):
         self.discount = 0.9
         self.reward_weights = np.array([-1,-1,-1])
         self.feature_func = feature_func
+        self.best_policy = None
+        self.best_reward = float("-inf")
 
         self.reset()
 
     def run(self):
-        reward = 0
         while not self.terminal(self.state):
             self.choose_action(self.state)
             self.trajectory.append(self.next_state)
 
-            self.Q[(self.state, self.action)] = self.state_action_value + self.lr * self.temporal_difference
-            reward += self.reward
+            reward = self.reward
+            self.Q[(self.state, self.action)] = self.state_action_value + self.lr * (reward + self.temporal_difference)
+            self.total_reward += reward
+
+            if self.total_reward > self.best_reward:
+                self.best_reward = self.total_reward
+                self.best_policy = self.trajectory
+
             self.set_state(self.next_state)
-        return reward
+        return self.total_reward
 
     def random_walk(self):
         while not self.terminal(self.state):
@@ -343,7 +350,7 @@ class Environment(GraphEnv):
 
     @property
     def temporal_difference(self):
-        return self.reward + self.discount * self.state_value(self.next_state) - self.state_action_value
+        return self.discount * self.state_value(self.next_state) - self.state_action_value
 
     def terminal(self, state):
         if state is None:

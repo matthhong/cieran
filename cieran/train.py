@@ -188,7 +188,7 @@ class Cieran:
         lr_decay_rate = 0.9995
         min_lr = 0.01
 
-        best_reward = -99999
+        best_reward = float("-inf")
         best_path = None
         for i in range(epochs):
             if i % 100 == 99:
@@ -198,7 +198,9 @@ class Cieran:
 
             _ = self._env.run()
 
-            path, total_reward = self._env.get_best_path()
+            # path, total_reward = self._env.get_best_path()
+            path = self._env.best_policy
+            total_reward = self._env.best_reward
             self.reward_history.append(_)
 
             if total_reward > best_reward:
