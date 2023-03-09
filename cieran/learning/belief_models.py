@@ -9,6 +9,7 @@ import numpy as np
 
 from cieran.learning import User, QueryWithResponse
 from cieran.utils import gaussian_proposal, uniform_logprior
+from cieran.basics import Trajectory, TrajectorySet
 
 
 class Belief:
@@ -144,3 +145,17 @@ class SamplingBasedBelief(LinearRewardBelief):
             if key == 'weights':
                 mean_params[key] /= np.linalg.norm(mean_params[key])
         return mean_params
+    
+    def reward(self, trajectories: Union[Trajectory, TrajectorySet]) -> Union[float, np.array]:
+        """
+        Returns the reward of a trajectory or a set of trajectories conditioned on the user.
+        
+        Args:
+            trajectories (Trajectory or TrajectorySet): The trajectories for which the reward will be calculated.
+            
+        Returns:
+            numpy.array or float: the reward value of the :py:attr:`trajectories` conditioned on the user.
+        """
+        if isinstance(trajectories, TrajectorySet):
+            return np.dot(trajectories.features_matrix, self.mean['weights'])
+        return np.dot(trajectories.features, self.mean['weights'])

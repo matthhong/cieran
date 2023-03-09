@@ -10,7 +10,8 @@ from cieran.querying.query_optimizer import QueryOptimizerDiscreteTrajectorySet
 
 from cieran.utils import util_functions
 
-import json
+import csv
+import os
 
 from coloraide import Color
 
@@ -50,13 +51,14 @@ class Cieran:
         self._trajectories = None
         self._query_optimizer = None
         self._user_model = None
-        self._belief = None
+        self._belief_model = None
         self._query = None
         self._ranked_results = None
-        self._data = {
+        self.data = {
             'id': randint(1, 9999),
             'choice': None
         }
+        self.block = 0
 
     def set_color(self, color):
         if isinstance(color, str):
@@ -65,6 +67,10 @@ class Cieran:
         elif isinstance(color, list) or isinstance(color, np.ndarray):
             self.color = color
             self.hex_color = Color(color).convert('srgb').to_string(hex=True)
+
+        self.block += 1
+        self.data['color'] = self.hex_color
+        self.data['block'] = self.block
 
         self._env = Environment(self.color, feature_func=feature_func)
 
@@ -75,11 +81,12 @@ class Cieran:
 
         self._query_optimizer = QueryOptimizerDiscreteTrajectorySet(self._trajectories)
 
-        params = {'weights': util_functions.get_random_normalized_vector(features_dim)}
+        # params = {'weights': util_functions.get_random_normalized_vector(features_dim)}
+        params = {'weights': np.zeros(features_dim)}
         self._env.reward_weights = params['weights']
 
         self._user_model = SoftmaxUser(params)
-        self._belief = SamplingBasedBelief(self._user_model, [], params)
+        self._belief_model = SamplingBasedBelief(self._user_model, [], params)
         # print('Estimated user parameters: ' + str(belief.mean))
                                             
         self._query = WeakComparisonQuery(self._trajectories[:2], chart=self.draw)
@@ -123,7 +130,7 @@ class Cieran:
             display(grid)
 
     def _ranker(self):
-        ranked = np.argsort(self._user_model.reward(self._trajectories))[::-1]
+        ranked = np.argsort(self._belief_model.reward(self._trajectories))[::-1]
         results = TrajectorySet([])
 
         for i in ranked:
@@ -143,7 +150,7 @@ class Cieran:
             bar.value = query_no
             display(bar)
 
-            queries, objective_values = self._query_optimizer.optimize('disagreement', self._belief, self._query)
+            queries, objective_values = self._query_optimizer.optimize('disagreement', self._belief_model, self._query)
 
             # print('Trajectory 1: ' + str(queries[0].slate[0].features))
             # print('Trajectory 2: ' + str(queries[0].slate[1].features))
@@ -151,8 +158,8 @@ class Cieran:
             # print('Objective Value: ' + str(objective_values[0]))
             
             responses = true_user.respond(queries[0])
-            self._belief.update(WeakComparison(queries[0], responses[0]))
-            self._env.set_reward_weights(self._belief.mean['weights'])
+            self._belief_model.update(WeakComparison(queries[0], responses[0]))
+            self._env.set_reward_weights(self._belief_model.mean['weights'])
             # print('Estimated user parameters: ' + str(self._belief.mean))
         
         bar.value = query_no
@@ -193,17 +200,17 @@ class Cieran:
             _ = self._env.run()
 
             # path, total_reward = self._env.get_best_path()
-            path = self._env.best_policy
-            total_reward = self._env.best_reward
+            # path = self._env.best_policy
+            # total_reward = self._env.best_reward
             self.reward_history.append(_)
 
-            if total_reward > best_reward:
-                best_reward = total_reward
-                best_path = path
+            # if total_reward > best_reward:
+            #     best_reward = total_reward
+            #     best_path = path
 
             self._env.reset()
 
-        self._search_result = Trajectory(self._env, best_path)
+        self._search_result = Trajectory(self._env, self._env.best_policy)
 
     def search_result(self):
         if self._search_result is not None:
@@ -227,11 +234,25 @@ class Cieran:
 
             # Handle on click event to output
             def on_button_clicked(b, id):
-                self.data._choice = id
-                # Display a window to save the data with json
+                self.data['choice'] = id
+                self.data['weights'] = self._env.reward_weights
+                self.data['trajectories'] = [self._search_result.trajectory]
 
-                with open('cieran' + str(self.data.id) + '.json', 'w') as f:
-                    json.dump(self.data, f)
+                for result in self._ranked_results[:3]:
+                    self.data['trajectories'].append(result.trajectory)
+
+                self.data['rewards'] = [self._belief_model.reward(result) for result in [self._search_result] + self._ranked_results[:3]]
+
+                filename = './cieran' + str(self.data['id']) + '.csv'
+                if not os.path.exists(filename):
+                    with open('./cieran' + str(self.data['id']) + '.csv', 'w') as f:
+                        writer = csv.DictWriter(f, fieldnames=self.data.keys())
+                        writer.writeheader()
+                        writer.writerow(self.data)
+                else:
+                    with open('./cieran' + str(self.data['id']) + '.csv', 'a') as f:
+                        writer = csv.DictWriter(f, fieldnames=self.data.keys())
+                        writer.writerow(self.data)
 
 
             bound = partial(on_button_clicked, id=i)
