@@ -31,8 +31,6 @@ colors = []
 COLOR_FILE = 'hex_values.txt'
 
 
-from coloraide import Color
-
 
 
 class Cieran:
@@ -55,6 +53,7 @@ class Cieran:
         self._belief_model = None
         self._query = None
         self._ranked_results = None
+        self.candidates = []
         self.data = {
             'id': randint(1, 9999),
             'choice': {},
@@ -77,8 +76,13 @@ class Cieran:
         self._env = Environment(self.color, feature_func=feature_func)
 
         self._trajectories = TrajectorySet([])
+        self.candidates = []
         for traj in self._env.fitted_ramps:
-            self._trajectories.append(Trajectory(self._env, traj))
+            traj_id = hashlib.sha256(np.array(traj)).hexdigest()
+            if traj_id not in self.candidates:
+                traj_obj = Trajectory(self._env, traj)
+                self._trajectories.append(traj_obj)
+                self.candidates.append(traj_id)
         features_dim = len(self._trajectories[0].features)
 
         self._query_optimizer = QueryOptimizerDiscreteTrajectorySet(self._trajectories)
