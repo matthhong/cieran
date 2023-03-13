@@ -138,7 +138,7 @@ def feature_func(trajectory):
     # b_list = min_max(trajectory, accessor=lambda point: point[2])
     # max_c = max_chroma(trajectory)
     mean_c, slope_c = mean_and_slope_chroma(trajectory)
-    mean_theta, stdev_theta = mean_stdev_theta(trajectory)
+    # mean_theta, stdev_theta = mean_stdev_theta(trajectory)
     # a_range = value_range(trajectory[1:-1], accessor=lambda point: point[1])
     # b_range = value_range(trajectory[1:-1], accessor=lambda point: point[2])
     # range1 = value_range2(trajectory, degree=0)

@@ -312,10 +312,6 @@ class Environment(GraphEnv):
             self.Q[(self.state, self.action)] = self.state_action_value + self.lr * (reward + self.temporal_difference)
             self.total_reward += reward
 
-            if self.total_reward > self.best_reward:
-                self.best_reward = self.total_reward
-                self.best_policy = self.trajectory
-
             self.set_state(self.next_state)
         return self.total_reward
 

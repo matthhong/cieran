@@ -100,7 +100,7 @@ def disagreement(weights: np.array, logprobs: List[float], **kwargs) -> float:
     """
     assert(len(weights) == len(logprobs) == 2), 'disagreement acquisition function works only with pairwise comparison queries, i.e., K must be 2.'
 
-    kwargs.setdefault('lambda', 1e-2)
+    kwargs.setdefault('lambda', 500)
     term1 = np.prod(np.exp(logprobs))
     term2 = kwargs['lambda'] * np.linalg.norm(weights[0] - weights[1])
     return term1 + term2

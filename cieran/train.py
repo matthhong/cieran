@@ -19,6 +19,7 @@ from collections import defaultdict
 from functools import partial
 
 import numpy as np
+import hashlib
 
 import ipywidgets as widgets
 from IPython.display import display, clear_output
@@ -56,7 +57,7 @@ class Cieran:
         self._ranked_results = None
         self.data = {
             'id': randint(1, 9999),
-            'choice': None
+            'choice': {},
         }
         self.block = 0
 
@@ -68,6 +69,7 @@ class Cieran:
             self.color = color
             self.hex_color = Color(color).convert('srgb').to_string(hex=True)
 
+        self.data['choice'] = {}
         self.block += 1
         self.data['color'] = self.hex_color
         self.data['block'] = self.block
@@ -91,6 +93,7 @@ class Cieran:
                                             
         self._query = WeakComparisonQuery(self._trajectories[:2], chart=self.draw)
         self._search_result = None
+        self._ranked_results = None
 
     def _tableau10(self):
         clear_output()
@@ -191,6 +194,7 @@ class Cieran:
 
         best_reward = float("-inf")
         best_path = None
+        candidates = []
         for i in range(epochs):
             if i % 100 == 99:
                 bar.value = i
@@ -207,6 +211,17 @@ class Cieran:
             # if total_reward > best_reward:
             #     best_reward = total_reward
             #     best_path = path
+            if self._env.total_reward > self._env.best_reward and len(self._env.trajectory) > 3:
+                print(self._env.trajectory)
+                traj_id = hashlib.sha256(np.array(self._env.trajectory)).hexdigest()
+
+                if traj_id not in candidates:
+                    candidates.append(traj_id)
+                    traj = Trajectory(self._env, self._env.trajectory)
+                    in_gamut = traj.in_gamut
+                    if in_gamut:
+                        self._env.best_reward = self._env.total_reward
+                        self._env.best_policy = self._env.trajectory
 
             self._env.reset()
 
@@ -232,9 +247,11 @@ class Cieran:
         for i, result in enumerate(results):
             output = widgets.Output(description=str(i))
 
-            # Handle on click event to output
-            def on_button_clicked(b, id):
-                self.data['choice'] = id
+            def on_rank_change(change, id):
+                # get new value
+                new_value = change['new']
+                
+                self.data['choice'][id] = new_value
                 self.data['weights'] = self._env.reward_weights
                 self.data['trajectories'] = [self._search_result.trajectory]
 
@@ -243,19 +260,7 @@ class Cieran:
 
                 self.data['rewards'] = [self._belief_model.reward(result) for result in [self._search_result] + self._ranked_results[:3]]
 
-                filename = './cieran' + str(self.data['id']) + '.csv'
-                if not os.path.exists(filename):
-                    with open('./cieran' + str(self.data['id']) + '.csv', 'w') as f:
-                        writer = csv.DictWriter(f, fieldnames=self.data.keys())
-                        writer.writeheader()
-                        writer.writerow(self.data)
-                else:
-                    with open('./cieran' + str(self.data['id']) + '.csv', 'a') as f:
-                        writer = csv.DictWriter(f, fieldnames=self.data.keys())
-                        writer.writerow(self.data)
-
-
-            bound = partial(on_button_clicked, id=i)
+            bound = partial(on_rank_change, id=i)
             
             button = widgets.Button(description='Option ' + str(i), 
                                     layout=widgets.Layout(
@@ -263,13 +268,19 @@ class Cieran:
                 # Center the button
                 display='flex', align_items='center', justify_content='center'
                 ))
-            button.on_click(bound)
-            output.append_display_data(button)
+            text_box = widgets.IntText(
+                value=None,
+                description='Rank ' + str(i),
+                disabled=False
+            )
+            # Bind a callback to the text_box when the value changes
+            text_box.observe(bound, names='value')
+
+            output.append_display_data(text_box)
 
             outputs.append(output)
             with output:
                 self.draw(result)
-
 
         if shuffle:
             np.random.shuffle(outputs)
@@ -277,6 +288,19 @@ class Cieran:
         grid = widgets.GridBox(children=outputs, layout=widgets.Layout(grid_template_columns="repeat(2, 50%)"))
         display(grid)
 
+    
+    def save_data(self):
+
+        filename = './cieran' + str(self.data['id']) + '.csv'
+        if not os.path.exists(filename):
+            with open('./cieran' + str(self.data['id']) + '.csv', 'w') as f:
+                writer = csv.DictWriter(f, fieldnames=self.data.keys())
+                writer.writeheader()
+                writer.writerow(self.data)
+        else:
+            with open('./cieran' + str(self.data['id']) + '.csv', 'a') as f:
+                writer = csv.DictWriter(f, fieldnames=self.data.keys())
+                writer.writerow(self.data)
 
 
 

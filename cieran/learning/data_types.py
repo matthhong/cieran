@@ -170,7 +170,7 @@ class WeakComparisonQuery(Query):
 
         selection = None
         while selection is None:
-            selection = input('Which is better for a paper figure? Enter a number (1 left, 2 right, 0 no preference): ')
+            selection = input('Which is better for a paper figure? Enter a number (1 left, 2 right, 0 indifferent): ')
             selection = str(int(selection) - 1)
             if not isinteger(selection) or int(selection) not in self.response_set:
                 selection = None
