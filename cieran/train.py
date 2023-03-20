@@ -41,6 +41,12 @@ class Cieran:
 
         self.lab_color = None
         self.hex_color = None
+
+        self.data = {
+            'id': randint(1, 9999)
+            # 'choice2': {}
+        }
+        self.block = 0
         if color == 'tableau10':
             self._tableau10()
         elif color is not None:
@@ -54,11 +60,7 @@ class Cieran:
         self._query = None
         self._ranked_results = None
         self.candidates = []
-        self.data = {
-            'id': randint(1, 9999),
-            'choice': {},
-        }
-        self.block = 0
+
 
     def set_color(self, color):
         if isinstance(color, str):
@@ -66,12 +68,12 @@ class Cieran:
             self.hex_color = color
         elif isinstance(color, list) or isinstance(color, np.ndarray):
             self.color = color
-            self.hex_color = Color(color).convert('srgb').to_string(hex=True)
+            self.hex_color = Color("lab({}% {} {} / 1)".format(*color)).convert('srgb').to_string(hex=True)
 
-        self.data['choice'] = {}
+        # self.data['choice'] = {}
         self.block += 1
         self.data['color'] = self.hex_color
-        self.data['block'] = self.block
+        # self.data['block'] = self.block
 
         self._env = Environment(self.color, feature_func=feature_func)
 
@@ -216,7 +218,7 @@ class Cieran:
             #     best_reward = total_reward
             #     best_path = path
             if self._env.total_reward > self._env.best_reward and len(self._env.trajectory) > 3:
-                print(self._env.trajectory)
+                # print(self._env.trajectory)
                 traj_id = hashlib.sha256(np.array(self._env.trajectory)).hexdigest()
 
                 if traj_id not in candidates:
@@ -242,27 +244,45 @@ class Cieran:
                 ramps.append(self._ranked_results[i].ramp)
             return ramps
         
+    def options(self, M=0):
+        if M % 2 == 0:
+            return self.options_display
+        else:
+            return self.options_display2
+        
     @property
     def options_display(self, shuffle=True):
         import ipywidgets as widgets
-        results = [self.search_result()] + self.ranked_results(3)
+        results = [self._search_result, self._ranked_results[0]]
+
+        # Get the middle element of _ranked_results
+        middle = len(self._ranked_results.trajectories) // 2
+        median = self._ranked_results[middle]
+
+        # Get the last element of _ranked_results
+        last = self._ranked_results[-1]
+        results = results + [median, last]
+
+        # self.data['weights'] = 
+        for i, weight in enumerate(self._env.reward_weights):
+            self.data['weight_' + str(i)] = weight
+        # self.data['trajectories'] = [res.trajectory for res in results]
+
+        # for result in self._ranked_results[:3]:
+        #     self.data['trajectories'].append(result.trajectory)
+
+        for i, result in enumerate(results):
+            self.data[str(i) + '_reward'] = self._belief_model.reward(result)
+
+        def on_rank_change(change, id):
+            # get new value
+            new_value = change['new']
+            
+            self.data[id] = new_value
 
         outputs = []
         for i, result in enumerate(results):
             output = widgets.Output(description=str(i))
-
-            def on_rank_change(change, id):
-                # get new value
-                new_value = change['new']
-                
-                self.data['choice'][id] = new_value
-                self.data['weights'] = self._env.reward_weights
-                self.data['trajectories'] = [self._search_result.trajectory]
-
-                for result in self._ranked_results[:3]:
-                    self.data['trajectories'].append(result.trajectory)
-
-                self.data['rewards'] = [self._belief_model.reward(result) for result in [self._search_result] + self._ranked_results[:3]]
 
             bound = partial(on_rank_change, id=i)
             
@@ -274,7 +294,57 @@ class Cieran:
                 ))
             text_box = widgets.IntText(
                 value=None,
-                description='Rank ' + str(i),
+                description='Rank ',
+                disabled=False
+            )
+            # Bind a callback to the text_box when the value changes
+            text_box.observe(bound, names='value')
+
+            output.append_display_data(text_box)
+
+            outputs.append(output)
+            with output:
+                self.draw(result.ramp)
+
+        if shuffle:
+            np.random.shuffle(outputs)
+        # Make a gridbox
+        grid = widgets.GridBox(children=outputs, layout=widgets.Layout(grid_template_columns="repeat(2, 50%)"))
+        display(grid)
+
+    @property
+    def options_display2(self, shuffle=True):
+        import ipywidgets as widgets
+        results = [self.search_result()] + self.ranked_results(3)
+
+        outputs = []
+        def on_rank_change2(change, id):
+            # get new value
+            new_value = change['new']
+            
+            self.data['choice2'][id] = new_value
+            # self.data['weights'] = self._env.reward_weights
+            self.data['trajectories2'] = [self._search_result.trajectory]
+
+            for result in self._ranked_results[:3]:
+                self.data['trajectories2'].append(result.trajectory)
+
+            self.data['rewards2'] = [self._belief_model.reward(result) for result in [self._search_result] + self._ranked_results[:3]]
+
+        for i, result in enumerate(results):
+            output = widgets.Output(description=str(i))
+
+            bound = partial(on_rank_change2, id=i)
+            
+            button = widgets.Button(description='Option ' + str(i), 
+                                    layout=widgets.Layout(
+                width='auto', height='auto', margin='8px',
+                # Center the button
+                display='flex', align_items='center', justify_content='center'
+                ))
+            text_box = widgets.IntText(
+                value=None,
+                description='Rank ',
                 disabled=False
             )
             # Bind a callback to the text_box when the value changes

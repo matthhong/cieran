@@ -99,6 +99,9 @@ class Trajectory:
             at_t = np.interp(at, arc_lengths, t)
             self._points = [self._curve(index) for index in at_t]
 
+            # Filter all points where the first (L*) value is less than 30
+            self._points = [p for p in self._points if p._coords[0] > 20]
+
             # Get the points from the ramp using the parameterization
             # points = self._curve.evaluate_list(at_t)
             colors = [p.convert('srgb').to_string(hex=True) for p in self._points]
