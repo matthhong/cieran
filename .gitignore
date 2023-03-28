@@ -1,3 +1,5 @@
-*.csv
-*.json
-*.pkl
+# *.csv
+# *.json
+# *.pkl
+# *.ipynb
+# __pycache__/
