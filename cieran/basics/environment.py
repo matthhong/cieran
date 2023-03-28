@@ -294,6 +294,7 @@ class Environment(GraphEnv):
         self.weight = weight
         self.epsilon = epsilon
         self.Q = {}
+        self.N = {}
 
         self.lr = 0.1
         self.discount = 0.9
@@ -309,7 +310,12 @@ class Environment(GraphEnv):
             self.trajectory.append(self.next_state)
 
             reward = self.reward
-            self.Q[(self.state, self.action)] = self.state_action_value + self.lr * (reward + self.temporal_difference)
+            if self.N[(self.state, self.action)] == 1:
+                self.Q[(self.state, self.action)] = self.state_action_value +  (reward + self.temporal_difference)
+            else:
+                self.Q[(self.state, self.action)] = self.state_action_value + 0.1 * (reward + self.temporal_difference)
+
+            self.N[(self.state, self.action)] += 1
             self.total_reward += reward
 
             self.set_state(self.next_state)

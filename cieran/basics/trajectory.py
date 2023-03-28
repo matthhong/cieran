@@ -78,37 +78,36 @@ class Trajectory:
 
     @property
     def ramp(self):
-        if self._ramp is None:
-            controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
-            self._curve = Color.interpolate(controls, method='bspline')
-        
-            t = np.linspace(0, 1, 256)
-            at = np.linspace(0, 1, 256)
-            # points = self._curve.evaluate_list(at)
-            points = [self._curve(index) for index in at]
+        controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in self.trajectory]
+        self._curve = Color.interpolate(controls, method='bspline')
+    
+        t = np.linspace(0, 1, 256)
+        at = np.linspace(0, 1, 256)
+        # points = self._curve.evaluate_list(at)
+        points = [self._curve(index) for index in at]
 
-            # Get the arc length of the ramp at each point using distance function
-            arc_lengths = [0]
-            for i in range(1, len(points)):
-                arc_lengths.append(arc_lengths[i-1] + self.distance(points[i-1], points[i]))
+        # Get the arc length of the ramp at each point using distance function
+        arc_lengths = [0]
+        for i in range(1, len(points)):
+            arc_lengths.append(arc_lengths[i-1] + self.distance(points[i-1], points[i]))
 
-            # Normalize the arc lengths
-            arc_lengths = np.array(arc_lengths) / arc_lengths[-1]
+        # Normalize the arc lengths
+        arc_lengths = np.array(arc_lengths) / arc_lengths[-1]
 
-            # Invert the arc lengths to get the parameterization
-            at_t = np.interp(at, arc_lengths, t)
-            self._points = [self._curve(index) for index in at_t]
+        # Invert the arc lengths to get the parameterization
+        at_t = np.interp(at, arc_lengths, t)
+        self._points = [self._curve(index) for index in at_t]
 
-            # Filter all points where the first (L*) value is less than 30
-            self._points = [p for p in self._points if p._coords[0] > 20]
+        # Filter all points where the first (L*) value is less than 30
+        self._points = [p for p in self._points if p._coords[0] > 10 and p._coords[0] < 95]
 
-            # Get the points from the ramp using the parameterization
-            # points = self._curve.evaluate_list(at_t)
-            colors = [p.convert('srgb').to_string(hex=True) for p in self._points]
-            # colors = [self._curve(index).convert('srgb').to_string(hex=True) for index in at_t]
+        # Get the points from the ramp using the parameterization
+        # points = self._curve.evaluate_list(at_t)
+        colors = [p.convert('srgb').to_string(hex=True) for p in self._points]
+        # colors = [self._curve(index).convert('srgb').to_string(hex=True) for index in at_t]
 
-            # convert to ListedColormap
-            self._ramp = ListedColormap(colors)
+        # convert to ListedColormap
+        self._ramp = ListedColormap(colors)
 
         return self._ramp
     

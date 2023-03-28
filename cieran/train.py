@@ -43,7 +43,7 @@ class Cieran:
         self.hex_color = None
 
         self.data = {
-            'id': randint(1, 9999)
+            'id': randint(1, 999999)
             # 'choice2': {}
         }
         self.block = 0
@@ -139,13 +139,17 @@ class Cieran:
             display(grid)
 
     def _ranker(self):
-        ranked = np.argsort(self._belief_model.reward(self._trajectories))[::-1]
+        ranked = np.argsort(np.dot(self._trajectories.features_matrix, self._env.reward_weights))[::-1]
         results = TrajectorySet([])
 
         for i in ranked:
             results.append(self._trajectories.trajectories[i])
 
         self._ranked_results = results
+
+    def set_reward_weights(self, weights):
+        self._env.set_reward_weights(weights)
+        # self._belief_model.user_model.params['weights'] = weights
 
     def teach(self, n_queries=15):
         true_user = HumanUser(delay=0.5)
@@ -192,8 +196,10 @@ class Cieran:
         self._env.discount= 1
         self._env.lr = 1
         self._env.Q = defaultdict(float)
+        self._env.N = defaultdict(int)
         self._env.epsilon = 0.1
         self._env.Q.default_factory = lambda: 100.0
+        self._env.N.default_factory = lambda: 1
 
         lr_decay_rate = 0.9995
         min_lr = 0.01
@@ -272,7 +278,7 @@ class Cieran:
         #     self.data['trajectories'].append(result.trajectory)
 
         for i, result in enumerate(results):
-            self.data[str(i) + '_reward'] = self._belief_model.reward(result)
+            self.data[str(i) + '_reward'] = np.dot(result.features, self._env.reward_weights)
 
         def on_rank_change(change, id):
             # get new value
