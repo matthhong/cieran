@@ -1,5 +1,6 @@
-# *.csv
-# *.json
-# *.pkl
-# *.ipynb
-# __pycache__/
+*.csv
+*.json
+*.pkl
+*.ipynb
+__pycache__
+ipynb_checkpoints
