@@ -21,7 +21,7 @@ if __name__ == "__main__":
     sampler = Halton(len(dimensions))
 
     # Generate samples
-    samples = sampler.random(1000)
+    samples = sampler.random(4000)
 
     # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
     samples = np.array([dimensions[i][0] + (dimensions[i][1] - dimensions[i][0]) * samples[:, i] for i in range(len(dimensions))]).T

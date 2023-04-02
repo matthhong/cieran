@@ -383,5 +383,201 @@ class Cieran:
                 writer.writerow(self.data)
 
 
+    def plot_3d(self):
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        from matplotlib.cm import ScalarMappable
+
+        # Create a row of five 3D subplots
+        fig, axes = plt.subplots(1, 5, subplot_kw={'projection': '3d'}, figsize=(20, 4))
+
+        # Remove padding between subplots
+        fig.subplots_adjust(wspace=-0.35)
+
+        # Remove margins from subplots
+        for ax in axes:
+            ax.margins(0)
+
+
+        data1 = self._env.centroids
+        data2 = self._env.fitted_ramps
+        _data3 = [self._env.fitted_ramps[10], self._env.fitted_ramps[20]]
+        data3 = []
+
+        for ramp in _data3:
+            controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in ramp]
+            curve = Color.interpolate(controls, method='bspline')
+            at = np.linspace(0, 1, 256)
+            data3.append([curve(index) for index in at])
+
+        data4 = self._ranked_results
+        _data5 = self._search_result
+        data5 = []
+        controls = [Color("lab({}% {} {} / 1)".format(*p)) for p in _data5]
+        curve = Color.interpolate(controls, method='bspline')
+        at = np.linspace(0, 1, 256)
+        data5 = [curve(index) for index in at]
+
+        # Plot the centroids while coloring each point according to its CIELAB values, without point opacity
+        axes[0].scatter([centroid[0] for centroid in data1], [centroid[1] for centroid in data1], [centroid[2] for centroid in data1], c=[np.array(Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3]) for centroid in data1], marker='o', s=40, alpha=1)
+        axes[0].set_title('512 quantized colors')
+
+        # Plot the fitted ramps as 3D lines
+        for ramp in data2:
+            axes[1].plot([point[0] for point in ramp], [point[1] for point in ramp], [point[2] for point in ramp], c='gray', alpha=0.2)
+        axes[1].set_title('Expert-designed colormaps')
+
+        # Plot data 3
+
+        axes[2].plot([point[0] for point in data3[0][1:-1]], [point[1] for point in data3[0][1:-1]], [point[2] for point in data3[0][1:-1]], c='black')
+        axes[2].scatter([point[0] for point in _data3[0][1:-1]], [point[1] for point in _data3[0][1:-1]], [point[2] for point in _data3[0][1:-1]], 
+                        c=[np.array(Color("lab({}% {} {} / 1)".format(*point)).convert('srgb')[:3]) for point in _data3[0][1:-1]], marker='o', s=40, alpha=1)
+        axes[2].plot([point[0] for point in data3[1]], [point[1] for point in data3[1]], [point[2] for point in data3[1]], c='gray', alpha=0.5)
+        axes[2].scatter([point[0] for point in _data3[1]], [point[1] for point in _data3[1]], [point[2] for point in _data3[1]], c='gray', alpha=0.5, s=5)
+
+        axes[2].scatter([point[0] for point in _data5][0], [point[1] for point in _data5][0], [point[2] for point in _data5][0], c='white', marker='o', s=40, alpha=1, edgecolors='black', linewidths=1)
+        # Give the last circle a stroke
+        axes[2].scatter([point[0] for point in _data5][-1], [point[1] for point in _data5][-1], [point[2] for point in _data5][-1], c='black', marker='o', s=40, alpha=1, edgecolors='black', linewidths=1)
+        
+
+        axes[2].set_title('Pairwise comparison queries')
+
+        # Compute the reward for each result
+        rewards = [np.dot(result.features, self._env.reward_weights) for result in data4]
+        norm = plt.Normalize(min(rewards), max(rewards))
+        mapper = ScalarMappable(norm=norm, cmap='Greys')
+
+        # # Invert the colormap so that the best results are blue
+        # mapper.set_array(rewards)
+        # mapper.set_clim(min(rewards), max(rewards))
+
+
+        # Plot data 4 and color according to reward (orange is bad, blue is good)
+        for i, result in enumerate(data4):
+            axes[3].plot([point[0] for point in result.trajectory], [point[1] for point in result.trajectory], [point[2] for point in result.trajectory], c=mapper.to_rgba(rewards[i]), alpha=0.7)
+        axes[3].set_title('Ranking expert colormaps')
+
+        # Plot the trajectory of the search result
+                # Give the first circle a stroke
+        axes[4].scatter([point[0] for point in _data5][0], [point[1] for point in _data5][0], [point[2] for point in _data5][0], c='white', marker='o', s=40, alpha=1, edgecolors='black', linewidths=1)
+        # Give the last circle a stroke
+        axes[4].scatter([point[0] for point in _data5][-1], [point[1] for point in _data5][-1], [point[2] for point in _data5][-1], c='black', marker='o', s=40, alpha=1, edgecolors='black', linewidths=1)
+        
+        axes[4].plot([point[0] for point in data5], [point[1] for point in data5], [point[2] for point in data5], c='black')
+        axes[4].scatter([point[0] for point in _data5[1:-1]], [point[1] for point in _data5[1:-1]], [point[2] for point in _data5[1:-1]], c=[np.array(Color("lab({}% {} {} / 1)".format(*point)).convert('srgb')[:3]) for point in _data5[1:-1]], marker='o', s=40, alpha=1)
+        
+        # Label the first point as "Start" 30 pixels above the point in the z-direction
+        axes[4].text(_data5[0][0], _data5[0][1], _data5[0][2] + 30, "Initial state", color='black', fontsize=10, ha='center', va='center', style='italic')
+        # Label the last point as "End" 30 pixels below the point in the z-direction
+        axes[4].text(_data5[-1][0], _data5[-1][1], _data5[-1][2] - 30, "End state", color='black', fontsize=10, ha='center', va='center', style='italic')
+
+        axes[4].set_title('Generating a new colormap')
+
+        for ax in axes[:-1]:
+            ax.set_xticklabels([])
+
+        for ax in axes[1:-1]:
+            ax.w_xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+            ax.tick_params(axis='x', colors=(1.0, 1.0, 1.0, 0.0))
+
+        # Move the tick labels in axes[4] 10 pixels in the x direction
+        axes[4].xaxis.set_tick_params(pad=2, labelsize=10, labeltop=True, labelbottom=False, labelright=False, labelleft=False)
+
+        # Set all axes to the same scale
+        for ax in axes:
+            ax.set_xlim3d(100, 0)
+            ax.set_ylim3d(-100, 100)
+            ax.set_zlim3d(-100, 100)
+        
+            # ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_zticklabels([])
+
+            # Zoom into the plot
+            # ax.view_init(azim=-90, elev=30)
+
+            # Rotate 45 degrees clockwise
+            ax.view_init(azim=0, elev=30)
+
+            # Make the plot longer in the x direction
+            ax.get_proj = lambda: np.dot(Axes3D.get_proj(ax), np.diag([1.5, 1, 1, 1]))
+
+            # Make the reference lines lighter
+            ax.xaxis._axinfo['grid']['color'] = (0, 0, 0, 0.15)
+            ax.yaxis._axinfo['grid']['color'] = (0, 0, 0, 0.15)
+            ax.zaxis._axinfo['grid']['color'] = (0, 0, 0, 0.15)
+
+            # # Make all three panels transparent
+            # ax.patch.set_alpha(0)
+
+            # Make the background black
+            # ax.set_facecolor((0, 0, 0, 1))
+
+            ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+            ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+            ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+
+            # Make the whole plot bigger
+            # ax.get_proj = lambda: np.dot(Axes3D.get_proj(ax), np.diag([1.5, 1.5, 1.5, 1]))
+
+        for ax in axes[1:]:
+            # Remove the black outline of the plot
+            # ax.w_xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+            ax.w_yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+            ax.w_zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+
+            # Remove the tick marks too
+            # ax.tick_params(axis='x', colors=(1.0, 1.0, 1.0, 0.0))
+            ax.tick_params(axis='y', colors=(1.0, 1.0, 1.0, 0.0))
+            ax.tick_params(axis='z', colors=(1.0, 1.0, 1.0, 0.0))
+
+            # Draw another xz-plane across the plot
+            
+
+        
+
+        # Label the axes
+        axes[0].set_xlabel('L*')
+        axes[0].set_ylabel('a*')
+        axes[0].set_zlabel('b*')
+
+        # Move the labels closer to the axes
+        axes[0].xaxis.labelpad = -10
+        axes[0].yaxis.labelpad = -10
+        axes[0].zaxis.labelpad = -10
+
+        # plt.figure(figsize=(688/192, 384/192), dpi=192)
+
+        plt.savefig('my_fig.png', dpi=192)
+
+        # # Plot the points array
+        # # ax.scatter([point[0] for point in points], [point[1] for point in points], [point[2] for point in points], c='b', marker='o', s=10)
+
+        # # Plot the centroids while coloring each point according to its CIELAB values, without point opacity
+        # ax.scatter([centroid[0] for centroid in points], [centroid[1] for centroid in points], [centroid[2] for centroid in points], c=[np.array(Color("lab({}% {} {} / 1)".format(*centroid)).convert('srgb')[:3]) for centroid in points], marker='o', s=40, alpha=1)
+
+        # # path = [np.array([0, 0, 0]), np.array([ 19.2989826 ,  41.74382203, -38.76011605]), np.array([ 32.28726385,  27.86865056, -41.53451605]), np.array([ 37.48745916,  -2.38207341, -36.01835605]), np.array([ 50.01187323, -21.99646146, -15.25931605]), np.array([ 51.50113104, -34.32994721,   6.33204395]), np.array([ 62.27993963, -45.39380943,  27.61332395]), np.array([ 70.80044744, -44.6164889 ,  49.12308395]), np.array([ 82.76333807, -28.52595392,  72.16692395]), np.array([85.80288885, -7.81036178, 78.41748395]), np.array([100,   0,   0])]
+
+        # # # traj = Trajectory(None, path)
+        # # # curve = traj.get_curve(1000)
+        # # # Plot the continuous curve
+        # # # breakpoint()
+        # # # ax.plot(*zip(*curve), c='r', linewidth=2)
+
+        # # # Plot the discrete path
+        # # ax.scatter([point[0] for point in path], [point[1] for point in path], [point[2] for point in path], c='r', marker='o')
+
+        # # label axes
+        # ax.set_xlabel('L*')
+        # ax.set_ylabel('a*')
+        # ax.set_zlabel('b*')
+
+        # # set axis ranges
+        # ax.set_xlim(0, 100)
+        # ax.set_ylim(-128, 128)
+        # ax.set_zlim(-128, 128)
+        # plt.show()
+
+
 
 

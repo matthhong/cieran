@@ -310,10 +310,7 @@ class Environment(GraphEnv):
             self.trajectory.append(self.next_state)
 
             reward = self.reward
-            if self.N[(self.state, self.action)] == 1:
-                self.Q[(self.state, self.action)] = self.state_action_value +  (reward + self.temporal_difference)
-            else:
-                self.Q[(self.state, self.action)] = self.state_action_value + 0.1 * (reward + self.temporal_difference)
+            self.Q[(self.state, self.action)] = self.state_action_value + 0.1 * (reward + self.temporal_difference)
 
             self.N[(self.state, self.action)] += 1
             self.total_reward += reward
