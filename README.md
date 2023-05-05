@@ -24,4 +24,4 @@ cieran.teach(); cieran.search()
 [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
 
 ## Acknowledgements
-Cieran borrows code from the [APReL](https://github.com/Stanford-ILIAD/APReL) package with major modifications. We would like to thank the original authors for their contributions.
+Cieran borrows code from the [APReL](https://github.com/Stanford-ILIAD/APReL) package licensed under the MIT License. We would like to thank the original authors for their contributions.
