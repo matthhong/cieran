@@ -8,8 +8,6 @@ from cieran.learning.belief_models import SamplingBasedBelief
 
 from cieran.querying.query_optimizer import QueryOptimizerDiscreteTrajectorySet
 
-from cieran.utils import util_functions
-
 import csv
 import os
 
@@ -250,14 +248,18 @@ class Cieran:
                 ramps.append(self._ranked_results[i].ramp)
             return ramps
         
-    def options(self, M=0):
+    @property
+    def options(self):
+        return self._options()
+
+    def _options(self, M=1):
         if M % 2 == 0:
             return self.options_display
         else:
             return self.options_display2
         
     @property
-    def options_display(self, shuffle=True):
+    def options_display(self, shuffle=False):
         import ipywidgets as widgets
         results = [self._search_result, self._ranked_results[0]]
 
@@ -308,6 +310,7 @@ class Cieran:
 
             output.append_display_data(text_box)
 
+            display(output)
             outputs.append(output)
             with output:
                 self.draw(result.ramp)
@@ -319,7 +322,7 @@ class Cieran:
         display(grid)
 
     @property
-    def options_display2(self, shuffle=True):
+    def options_display2(self, shuffle=False):
         import ipywidgets as widgets
         results = [self.search_result()] + self.ranked_results(3)
 
@@ -356,8 +359,8 @@ class Cieran:
             # Bind a callback to the text_box when the value changes
             text_box.observe(bound, names='value')
 
-            output.append_display_data(text_box)
-
+            # output.append_display_data(text_box)
+            display(output)
             outputs.append(output)
             with output:
                 self.draw(result)
@@ -548,7 +551,8 @@ class Cieran:
 
         # plt.figure(figsize=(688/192, 384/192), dpi=192)
 
-        plt.savefig('my_fig.png', dpi=192)
+        # Save as svg
+        plt.savefig('colormap.svg', bbox_inches='tight', pad_inches=0)
 
         # # Plot the points array
         # # ax.scatter([point[0] for point in points], [point[1] for point in points], [point[2] for point in points], c='b', marker='o', s=10)

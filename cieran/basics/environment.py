@@ -3,27 +3,17 @@ import numpy as np
 import networkx as nx
 
 from scipy.stats.qmc import Halton
-from sklearn.neighbors import KDTree
+from scipy.spatial import cKDTree as KDTree
 from typing import Callable, List, Tuple, Union
 import random
 
 import pkg_resources
 
-
 RAMPS_FILE = pkg_resources.resource_filename('cieran', 'basics/ramps.csv')
 START = np.array([100, 0, 0])
 END = np.array([0, 0, 0])
 
-# from typing import List, Tuple, Union
-# import time
-# import numpy as np
-# from moviepy.editor import VideoFileClip
-# import networkx as nx
-from geomdl import fitting
-from geomdl.operations import tangent
 from coloraide import Color
-
-from queue import PriorityQueue
 
 class GraphEnv:
 
@@ -43,7 +33,8 @@ class GraphEnv:
         tree = KDTree(self.centroids)
         num_out_of_gamut = 0
 
-        seed_centroid = self.centroids[tree.query(np.array(self.color).reshape(1, -1), k=1)[1][0][0]]
+        # import pdb; pdb.set_trace()
+        seed_centroid = self.centroids[tree.query(np.array(self.color).reshape(1, -1), k=1)[1][0]]
         diff = np.array(self.color) - np.array(seed_centroid)
         # breakpoint()
 
@@ -81,7 +72,7 @@ class GraphEnv:
 
                         # Find the nearest centroid to the point using KDTree
                         tree = KDTree(self.centroids)
-                        nearest_centroid = self.centroids[tree.query(np.array(point).reshape(1, -1), k=1)[1][0][0]]
+                        nearest_centroid = self.centroids[tree.query(np.array(point).reshape(1, -1), k=1)[1][0]]
 
                         if nearest_centroid[0] > 100:
                             breakpoint()

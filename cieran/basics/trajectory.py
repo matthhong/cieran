@@ -1,30 +1,14 @@
 """Modules that are related to environment trajectories."""
 
 from typing import List, Tuple, Union
-import time
 import numpy as np
-# from moviepy.editor import VideoFileClip
-import networkx as nx
-from geomdl import fitting, operations
 from coloraide import Color
 
-from coloraide.interpolate.catmull_rom import CatmullRom
-
-# Color.register(CatmullRom())
 
 from matplotlib.colors import ListedColormap
 
 """Modules that are related to environment trajectories."""
 
-t = np.linspace(0, 2 * np.pi, 1024)
-data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
-
-def default_chart(cmap):
-   
-    fig, ax = plt.subplots()
-    ax.imshow(data2d, cmap=cmap)
-
-    plt.show()
 
 class Trajectory:
     """
@@ -73,8 +57,6 @@ class Trajectory:
     def draw(self):
         if self._draw:
             self._draw(self.ramp)
-        else:
-            default_chart(self.ramp)
 
     @property
     def ramp(self):
@@ -99,7 +81,7 @@ class Trajectory:
         self._points = [self._curve(index) for index in at_t]
 
         # Filter all points where the first (L*) value is less than 30
-        self._points = [p for p in self._points if p._coords[0] > 10 and p._coords[0] < 100]
+        self._points = [p for p in self._points if p._coords[0] > 30 and p._coords[0] < 100]
 
         # Get the points from the ramp using the parameterization
         # points = self._curve.evaluate_list(at_t)
@@ -142,6 +124,9 @@ class Trajectory:
                             width_ratios=[1, 1, 1],
                             height_ratios=[1, 1, 1]
                             )
+        
+        # Remove padding
+        fig.subplots_adjust(wspace=0, hspace=0)
 
         ax1 = fig.add_subplot(gs[0:, 0])
 
@@ -195,7 +180,7 @@ class Trajectory:
         ax3.set_ylabel("c* value")
 
         # Set y axes from -150 to 150
-        ax3.set_ylim(0, 150)
+        ax3.set_ylim(0, 100)
 
         # Plot the h values
         ax4.plot(h_values)

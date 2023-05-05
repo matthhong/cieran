@@ -6,18 +6,11 @@ Modules for queries and user responses.
     "ROIAL: Region of Interest Active Learning for Characterizing Exoskeleton Gait Preference Landscapes", ICRA'21.
 """
 from typing import List, Union
-from copy import deepcopy, copy
-import itertools
+from copy import copy
 import numpy as np
-import time
 
 from cieran.basics import Trajectory, TrajectorySet
 from matplotlib import pyplot as plt
-from matplotlib.colors import ListedColormap
-
-from geomdl import fitting
-
-from coloraide import Color
 from IPython.display import display, clear_output
 import ipywidgets as widgets
     
@@ -142,13 +135,6 @@ class WeakComparisonQuery(Query):
         plot_widget1 = widgets.Output()
         plot_widget2 = widgets.Output()
 
-        with plot_widget1:
-            # self.slate[0].plot_all()
-            self.chart(ramp1)
-
-        with plot_widget2:
-            # self.slate[1].plot_all()
-            self.chart(ramp2)
 
         box_layout = widgets.Layout(display='flex',
                         # flex_flow='column',
@@ -160,6 +146,14 @@ class WeakComparisonQuery(Query):
         display(out)
         with out:
             display(plots_hbox)
+
+        with plot_widget1:
+            # self.slate[0].plot_all()
+            self.chart(ramp1)
+
+        with plot_widget2:
+            # self.slate[1].plot_all()
+            self.chart(ramp2)
         
         # else:
         #     fig, ax = plt.subplots(1, 2, figsize=(10, 5))

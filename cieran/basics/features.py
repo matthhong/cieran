@@ -22,7 +22,7 @@ def mean_and_slope_chroma(trajectory):
     denominator = sum([(x[i] - x_mean)**2 for i in range(len(x))])
     slope = numerator / denominator
 
-    return y_mean/150, slope
+    return y_mean/100, slope/0.6
 
 def lightness_max_c(trajectory):
     chroma = []
@@ -108,7 +108,7 @@ def value_range2(trajectory, degree):
     return (max(ab_values[:, 0]) - min(ab_values[:, 0]))/127
 
 
-def distance2(trajectory, degree):
+def distance2(trajectory, degree, norm):
 
     ab_values = [[point[1], point[2]] for point in trajectory]
     # Rotate ab_values by an amount of degree (in radians)
@@ -119,7 +119,7 @@ def distance2(trajectory, degree):
     dist = []
     for point in ab_values:
         dist.append(np.sqrt((corner[0] - point[0])**2 + (corner[1] - point[1])**2))
-    return (min(dist)) / 180
+    return (min(dist) - norm) / (180 - norm)
 
 
 def distance_from_corner(trajectory, corner):
@@ -160,13 +160,14 @@ def feature_func(trajectory):
     # return np.array([slope_c, stdev_theta, max_c, corner1, corner2, corner3, corner4])
     # return np.array([slope_c, a_range, b_range, corner1, corner2, corner3, corner4])
 
-    corner1 = distance2(trajectory, 0)
-    corner2 = distance2(trajectory, np.pi/4)
-    corner3 = distance2(trajectory, np.pi/2)
-    corner4 = distance2(trajectory, 3*np.pi/4)
-    corner5 = distance2(trajectory, np.pi)
-    corner6 = distance2(trajectory, 5*np.pi/4)
-    corner7 = distance2(trajectory, 3*np.pi/2)
-    corner8 = distance2(trajectory, 7*np.pi/4)
+    corner1 = distance2(trajectory, 0, 84.54)
+    corner2 = distance2(trajectory, np.pi/4, 120.63)
+    corner3 = distance2(trajectory, np.pi/2, 138.68)
+    corner4 = distance2(trajectory, 3*np.pi/4, 99.41)
+    corner5 = distance2(trajectory, np.pi, 66.66)
+    corner6 = distance2(trajectory, 5*np.pi/4, 102.23)
+    corner7 = distance2(trajectory, 3*np.pi/2, 90.01)
+    corner8 = distance2(trajectory, 7*np.pi/4, 97.90)
 
     return np.array([slope_c, corner1, corner2, corner3, corner4, corner5, corner6, corner7, corner8])
+    # return np.array([mean_c, slope_c, corner1, corner3, corner5, corner7])
