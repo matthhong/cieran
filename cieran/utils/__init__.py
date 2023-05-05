@@ -1,4 +1,3 @@
-from .generate_trajectories import generate_trajectories_randomly
 from .sampling_utils import uniform_logprior, gaussian_proposal
 from .kmedoids import kMedoids
 from .dpp import dpp_mode
