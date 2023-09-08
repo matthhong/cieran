@@ -26,6 +26,8 @@ from scipy.spatial import cKDTree as KDTree
 from typing import Callable, List, Tuple, Union
 import random
 
+from collections import defaultdict
+
 import pkg_resources
 
 RAMPS_FILE = pkg_resources.resource_filename('cieran', 'basics/ramps.csv')
@@ -303,11 +305,14 @@ class Environment(GraphEnv):
         self.target = target
         self.weight = weight
         self.epsilon = epsilon
-        self.Q = {}
-        self.N = {}
 
+        self.discount= 1
         self.lr = 0.1
-        self.discount = 0.9
+        self.Q = defaultdict(float)
+        self.N = defaultdict(int)
+        self.Q.default_factory = lambda: 100.0
+        self.N.default_factory = lambda: 1
+
         self.feature_func = feature_func
         
         self.set_reward_weights(None)

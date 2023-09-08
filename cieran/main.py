@@ -199,7 +199,7 @@ class Cieran:
 
         # best_traj = self._query_optimizer.planner(self._user_model)
 
-    def search(self, weights=None, epochs=20000):
+    def search(self, weights=None, epochs=10000):
         if weights is not None:
             self._env.set_reward_weights(weights)
 
@@ -210,25 +210,12 @@ class Cieran:
         bar.style.bar_color = self.hex_color
         display(bar)
 
-        self._env.discount= 1
-        self._env.lr = 1
-        self._env.Q = defaultdict(float)
-        self._env.N = defaultdict(int)
-        self._env.epsilon = 0.1
-        self._env.Q.default_factory = lambda: 100.0
-        self._env.N.default_factory = lambda: 1
-
-        lr_decay_rate = 0.9995
-        min_lr = 0.01
-
-        best_reward = float("-inf")
-        best_path = None
         candidates = []
         for i in range(epochs):
             if i % 100 == 99:
                 bar.value = i
 
-            self._env.lr = max(self._env.lr * lr_decay_rate, min_lr)
+            # self._env.lr = max(self._env.lr * lr_decay_rate, min_lr)
 
             _ = self._env.run()
 
