@@ -1,7 +1,7 @@
 *.csv
 *.json
 *.pkl
-*.ipynb
+
 __pycache__
 ipynb_checkpoints
 .DS_Store
