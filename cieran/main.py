@@ -391,6 +391,38 @@ class Cieran:
                 writer = csv.DictWriter(f, fieldnames=self.data.keys())
                 writer.writerow(self.data)
 
+    @property
+    def results(self):
+        # Throw an error if _search_result is None
+        if self._search_result is None:
+            raise ValueError('No search results found. Run the search() method first.')
+        
+        # Create a vertical slider on the right of the screen, and show the selected colormap on the left
+        slider = widgets.IntSlider(
+            value=5,
+            min=0,
+            max=10,
+            description='Test:',
+            disabled=False,
+            continuous_update=True,
+            orientation='vertical',
+            readout=True,
+            readout_format='d'
+        )
+
+        output = widgets.Output()
+        output_list = [slider, output]
+
+        # When the slider changes, draw the colormap next to it
+        def on_value_change(change):
+            with output:
+                output.clear_output()
+                self.draw(self._ranked_results[change['new']].ramp)
+        slider.observe(on_value_change, names='value')
+
+        #Display the slider and the output together
+        display(widgets.HBox(output_list))
+
 
     def plot_3d(self):
         import matplotlib.pyplot as plt
