@@ -391,6 +391,61 @@ class Cieran:
                 writer = csv.DictWriter(f, fieldnames=self.data.keys())
                 writer.writerow(self.data)
 
+    def select(self):
+
+        search_result = self._search_result
+        min_value = 0
+
+        if search_result:
+            cmaps = [search_result] + self._ranked_results.trajectories
+        else:
+            cmaps = self._ranked_results.trajectories
+        
+        cmaps = cmaps[::-1]
+        max_value = len(cmaps) - 1
+        
+        # Create a vertical slider and set its characteristics, but without readout
+        slider = widgets.IntSlider(
+            value=max_value,
+            min=min_value,
+            max=max_value,
+            step=1,
+            description='',
+            disabled=False,
+            orientation='vertical',
+            readout=False
+        )
+
+        out = widgets.Output()
+        label = widgets.Label(layout=widgets.Layout(margin='0 auto'))
+
+        def update_label(val):
+            # Throw an error if _search_result is None
+            if search_result is None:
+                label.value = 'Option ' + str(max_value - val + 1)
+            else:
+                if val == max_value:
+                    label.value = 'New colormap'
+                else:
+                    label.value = 'Option ' + str(max_value - val)
+
+        def update(val):
+            cmap = cmaps[val]
+            with out:
+                out.clear_output(wait=True)
+                self.draw(cmap.ramp)
+            update_label(val)
+
+        update_label(slider.value)
+        slider.observe(lambda change: update(change['new']), names='value')
+
+        slider_with_label = widgets.VBox([label, slider])
+        layout = widgets.HBox([slider_with_label, out])
+
+        update(slider.value)
+
+        display(layout)
+
     @property
     def results(self):
         # Throw an error if _search_result is None
