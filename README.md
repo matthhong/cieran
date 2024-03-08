@@ -1,6 +1,6 @@
 # cieran
 
-Cieran is a Python package for designing visualization colormaps via RLHF (Reinforcement Learning from Human Feedback).
+Cieran is a Python package for designing visualization colormaps via active preference learning.
 
 ## Installation
 
