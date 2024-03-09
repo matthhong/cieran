@@ -8,3 +8,7 @@ ipynb_checkpoints
 build
 dist
 *.egg-info
+
+#mkdocs
+site
+site/*

@@ -12,7 +12,10 @@ install_requires = [
 dev_requires = [
     'altair',
     'jupyter',
-    'vega-datasets'
+    'vega-datasets',
+    'mkdocs',
+    'mkdocstrings[python]',
+    'mkdocs-material'
 ]
 
 setup(

@@ -1,0 +1,19 @@
+site_name: cieran
+site_url: https://matthhong.github.io/cieran/
+
+nav:
+  - Introduction: index.md
+  - The Cieran Object: cieran.md
+  - "Github": https://github.com/matthhong/cieran
+
+plugins:
+  - mkdocstrings
+
+theme:
+  name: material
+  logo: cieran.png
+  favicon: cieran.png
+  font:
+    text: Helvetica Neue
+  palette:
+    primary: white

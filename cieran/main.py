@@ -47,11 +47,17 @@ class Cieran:
     def __init__(self, draw):
         """Cieran is a module for designing sequential colormaps from pairwise choices.
 
-        Parameters
-        ----------
-        draw : function
-            A function that takes a colormap as input and displays a plot.
+        Examples:
+            >>> from cieran import Cieran
+            >>> import matplotlib.pyplot as plt
+            >>> import numpy as np
+            >>> data2d = np.random.rand(10, 10)
+            >>> def draw(cmap): plt.imshow(data2d, cmap=cmap); plt.show()
+            >>> cieran = Cieran(draw)
 
+        Args:
+            draw (function): A callback function that takes a ListedColormap as input and displays a plot. 
+                
         """
             
         self.draw = draw
@@ -73,12 +79,14 @@ class Cieran:
     def set_color(self, color):
         """Sets the color that should be included as a control point in output colormap trajectories.
 
-        Parameters
-        ----------
-        color : str or list
-            A color that should be included as a control point in output colormap trajectories. 
-            If a list, it should be a 3-element list of L*, a*, and b* values. 
-            If a string, it should be a hexadecimal string.
+        Examples:
+            >>> cieran.set_color([50, 0, 0])
+            >>> cieran.set_color("#ff0000")
+
+        Args:
+            color (str or list): A color that should be included as a control point in output colormap trajectories. 
+                If a list, it should be a 3-element list of L*, a*, and b* values. 
+                If a string, it should be a hexadecimal string.
         """
         if isinstance(color, str):
             self.color = Color(color).convert('lab')._coords[:-1]
@@ -130,10 +138,8 @@ class Cieran:
     def teach(self, N=15):
         """Teaches the robot to rank sequential colormaps by asking the user for pairwise comparisons.
 
-        Parameters
-        ----------
-        N : int
-            The number of colormap pairs to be queried for modeling user preferences.
+        Args:
+            N (int): The number of colormap pairs to be queried for modeling user preferences.
         """
         true_user = HumanUser(delay=0.5)
 
@@ -159,10 +165,8 @@ class Cieran:
     def search(self, epochs=10000):
         """Searches for a new colormap using Optimistic Q-Learning and the user belief model.
 
-        Parameters
-        ----------
-        epochs : int
-            The number of iterations to run the search algorithm (i.e., the number of colormaps to be sampled).
+        Args:
+            epochs (int): The number of iterations to run the search algorithm (i.e., the number of colormaps to be sampled).
         """
 
         self.reward_history = []
