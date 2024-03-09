@@ -97,8 +97,8 @@ class Trajectory:
         at_t = np.interp(at, arc_lengths, t)
         self._points = [self._curve(index) for index in at_t]
 
-        # Filter all points where the first (L*) value is less than 30
-        self._points = [p for p in self._points if p._coords[0] > 30 and p._coords[0] < 100]
+        # Filter all points where the first (L*) value is less than 10
+        self._points = [p for p in self._points if p._coords[0] > 10 and p._coords[0] < 100]
 
         # Get the points from the ramp using the parameterization
         # points = self._curve.evaluate_list(at_t)
@@ -230,8 +230,6 @@ class Trajectory:
         # Set x and y axes from -128 to 128
         ax1.set_xlim(-100, 100) 
         ax1.set_ylim(-100, 100)
-
-        plt.savefig("test.svg")
 
         plt.show()
 

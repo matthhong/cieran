@@ -39,29 +39,18 @@ from coloraide import Color
 class GraphEnv:
 
     def __init__(self, color):
-        # self.color = [round(x) for x in color]
         self.color = color
         self.ramps = self.load_ramps()
         self.centroids = self.load_centroids()
 
         self.graph = nx.DiGraph()
 
-        # rounded_color = [custom_round(x) for x in self.color]
-        # diff = np.array(rounded_color) - np.array(self.color)
-
-        # fit the ramps to the given color
         self.fitted_ramps = []
         tree = KDTree(self.centroids)
         num_out_of_gamut = 0
 
-        # import pdb; pdb.set_trace()
         seed_centroid = self.centroids[tree.query(np.array(self.color).reshape(1, -1), k=1)[1][0]]
         diff = np.array(self.color) - np.array(seed_centroid)
-        # breakpoint()
-
-        #time this
-        # import time
-        # start = time.time()
 
         num_out_of_gamut = 0
         for ramp in self.ramps:
@@ -85,27 +74,17 @@ class GraphEnv:
                         nearest_centroid = seed_centroid
                     else:
 
-                        # Check if the point is valid
                         if point[0] > 100 or point[0] < 0:
                             continue
-                        # round the point to the nearest integer
-                        # point = [custom_round(x) - diff[i] for i, x in enumerate(point)]
 
-                        # Find the nearest centroid to the point using KDTree
                         tree = KDTree(self.centroids)
                         nearest_centroid = self.centroids[tree.query(np.array(point).reshape(1, -1), k=1)[1][0]]
 
                         if nearest_centroid[0] > 100:
                             breakpoint()
-                    # if not Color("lab({}% {} {} / 1)".format(*point)).in_gamut('srgb'):
-                    #     if not out_of_gamut:
-                    #         num_out_of_gamut += 1
-                    #     out_of_gamut = True
-                    # self.graph.add_node(tuple(point))
-                    # if not out_of_gamut:
-                    # breakpoint()
+
                     if len(new_ramp) > 0:
-                        # Compare the first element between the last centroid and the current centroid
+                        # Compare the lightness between the last and current centroids (L* monotonicity)
                         l_diff = new_ramp[-1][0] - nearest_centroid[0]
 
                         if l_diff >= 0 and np.all(point == self.color):
@@ -118,40 +97,7 @@ class GraphEnv:
                 if not out_of_gamut:
                     self.fitted_ramps.append(new_ramp)
         
-        # end = time.time()
-        # taken = end - start
-        # print("Time to fit ramps in seconds: " + str(taken))
-        # print("num ramps: " + str(len(self.fitted_ramps)))
-        # print("num out of gamut: " + str(num_out_of_gamut))
 
-        #Visualize the states in 3D LAB space
-        # import matplotlib.pyplot as plt
-        # from mpl_toolkits.mplot3d import Axes3D
-
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111, projection='3d')
-
-        # for ramp in self.fitted_ramps:
-        #     ramp = np.array(ramp)
-        #     ax.plot(ramp[:,0], ramp[:,1], ramp[:,2])
-
-        # # Display all nodes as scatter plot, in gray
-        # print("Number of nodes:", len(self.graph.nodes))
-
-        # print("Number of original colors:" , len(self.fitted_ramps * 9))
-        # for node in self.graph.nodes:
-        #     # if not in any ramp
-        #     if not any(np.all(node == ramp) for ramp in self.fitted_ramps):
-        #         ax.scatter(node[0], node[1], node[2], c='gray', marker='o')
-        
-        # # Label the axes
-        # ax.set_xlabel('L')
-        # ax.set_ylabel('A')
-        # ax.set_zlabel('B')
-
-        # plt.show()
-
-            
         # Add the ramp points to the graph, and edges between adjacent ramp points
         for i in range(len(self.fitted_ramps)):
             # Put start and end points into the ramp
@@ -167,32 +113,20 @@ class GraphEnv:
     
 
     def load_centroids(self):
-        # centroids = np.empty((0,3))
-        # with open(self.CENTROID_FILE, 'r') as f:
-        #     for line in f:
-        #         values = line.replace('\n','').split(' ')
-        #         centroids = np.append(centroids, [np.array([float(values[0]), float(values[1]), float(values[2])])], axis=0)
-        # return centroids
         dimensions = [(0,100), (-128,127), (-128,127)]
     
-        # Initialize the Halton sampler
         sampler = Halton(len(dimensions), optimization='lloyd', seed=4)
-
-        # # Generate samples (256)
-        # samples = sampler.random(1973)
-
-        # Generate samples (512)
         samples = sampler.random(4074)
 
         # Map the samples of size (num_samples, 3) with values between 0 and 1 to the desired dimensions across the 3 axes
         samples = np.array([dimensions[i][0] + (dimensions[i][1] - dimensions[i][0]) * samples[:, i] for i in range(len(dimensions))]).T
 
         points = np.empty((0,3))
-        # Remove samples that are outside gamut or in collision with obstacles (circles of radius obstacle_rad)
+        # Remove samples that are outside gamut
         for i in range(len(samples)):
             if self.in_gamut(*samples[i]):
                 points = np.append(points, [samples[i]], axis=0)
-        # print("Number of points:", len(points))
+                
         return points
 
     def in_gamut(self, l, a, b):
@@ -386,7 +320,7 @@ class Environment(GraphEnv):
         max_q = -float('inf')
         max_neighbor = None
         neighbors = list(self.graph.neighbors(state))
-        # Shuffle neighbors in-place
+
         random.shuffle(neighbors)
 
         for neighbor in neighbors:
@@ -395,38 +329,6 @@ class Environment(GraphEnv):
                 max_q = q
                 max_neighbor = neighbor
         return max_q, max_neighbor
-    
-    def accel(self, accessor):
-        # Get last three points
-        sub_trajectory = self.trajectory[-3:]
-
-        slopes = []
-        for i in range(len(sub_trajectory) - 1):
-            slopes.append((sub_trajectory[i+1][accessor] - sub_trajectory[i][accessor]) / (sub_trajectory[i+1][0] - sub_trajectory[i][0]))
-
-        accel = 0
-        for i in range(len(slopes) - 1):
-            accel = slopes[i+1] - slopes[i]
-
-        return accel/127
-    
-    def max_accel(self, trajectory, accessor):
-
-        slopes = []
-        for i in range(len(trajectory) - 1):
-            slopes.append((trajectory[i+1][accessor] - trajectory[i][accessor]) / (trajectory[i+1][0] - trajectory[i][0]))
-
-        accels = []
-        for i in range(len(slopes) - 1):
-            accels.append(slopes[i+1] - slopes[i])
-
-        max_accel = 0
-        try:
-            max_accel = abs(max(accels))
-        except ValueError:
-            pass
-
-        return max_accel/127
 
     def choose_action(self, state):
         self.action = self.greedy_epsilon(state)
@@ -444,11 +346,9 @@ class Environment(GraphEnv):
         self.next_state = self.action
 
     def greedy_epsilon(self, state):
-        # Choose a random neighbor
         if random.random() < self.epsilon:
             return random.choice(self.state_actions[state])
 
-        # Choose the neighbor with the highest Q value
         max_neighbor = self.max_Q(state)[1]
         
         return max_neighbor
@@ -470,31 +370,6 @@ class Environment(GraphEnv):
             total_reward += self.reward
             self.set_state(self.next_state)
         return self.trajectory, total_reward
-
-
-
-# class Environment(QLearning):
-
-#     def __init__(self, color, source=tuple(START), target=tuple(END), weight='weight', epsilon=0.1, lambd=0.9, feature_func=None):
-#         super().__init__(color, source, target, weight, epsilon, feature_func=feature_func)
-#         self.decay = lambd
-#         self.render_exists = False
-#         self.close_exists = False
-#         self.feature_func = feature_func
-
-#     def run(self):
-#         eligibility = {}
-
-#         while self.state != self.target:
-#             self.choose_action(self.state)
-            
-#             eligibility[(self.state, self.next_state)] = eligibility.get((self.state, self.next_state), 0) + 1
-
-#             for a, b in self.graph.edges:
-#                 eligibility[(a,b)] = eligibility.get((a,b), 0) * self.decay * self.discount
-#                 self.Q[(a,b)] = self.Q[(a,b), 0) + self.lr * self.temporal_difference * eligibility[(a,b)]
-
-#             self.state = self.next_state
 
 
 
@@ -543,5 +418,3 @@ if __name__ == "__main__":
     ax.set_zlabel('B')
 
     plt.show()
-
-    breakpoint()
