@@ -28,9 +28,21 @@ import random
 
 from collections import defaultdict
 
-import pkg_resources
+from importlib import resources
 
-RAMPS_FILE = pkg_resources.resource_filename('cieran', 'basics/ramps.csv')
+
+import sys
+
+RAMPS_FILE = ''
+
+if sys.version_info < (3, 12):
+    import pkg_resources
+    RAMPS_FILE = pkg_resources.resource_filename('cieran', 'basics/ramps.csv')
+
+else:
+    from importlib import resources
+    RAMPS_FILE = str(resources.files('cieran.basics').joinpath('ramps.csv'))
+
 START = np.array([100, 0, 0])
 END = np.array([0, 0, 0])
 
