@@ -1,5 +1,6 @@
 # cieran
 
+![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
 [![Python package](https://github.com/matthhong/cieran/actions/workflows/python-package.yml/badge.svg)](https://github.com/matthhong/cieran/actions/workflows/python-package.yml)
 
 Cieran is a Python package for designing visualization colormaps via active preference learning.
