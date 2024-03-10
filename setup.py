@@ -15,7 +15,8 @@ dev_requires = [
     'vega-datasets',
     'mkdocs',
     'mkdocstrings[python]',
-    'mkdocs-material'
+    'mkdocs-material',
+    'pytest',
 ]
 
 setup(

@@ -95,9 +95,6 @@ class Cieran:
             self.color = color
             self.hex_color = Color("lab({}% {} {} / 1)".format(*color)).convert('srgb').to_string(hex=True)
 
-        self.block += 1
-        self.data['color'] = self.hex_color
-
         self._env = Environment(self.color, feature_func=feature_func)
 
         self._trajectories = TrajectorySet([])
