@@ -15,6 +15,8 @@ pip install cieran
 
 ## Usage
 
+See altair-demo.ipynb for more details.
+
 ```python
 from cieran import Cieran
 cie = Cieran(draw=draw_map)
